@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Check, Trash2 } from 'lucide-react'
 import type { AthleteProfile, Diet, FoodRegion, Gender } from '../types'
+import { bodyFor } from '../lib/fuel'
 
 type Props = { profile: AthleteProfile; checks: number; onSave: (profile: AthleteProfile) => void; onClearHistory: () => void }
 
@@ -38,7 +39,7 @@ export function Profile({ profile, checks, onSave, onClearHistory }: Props) {
           <div className="field full">Gender<div className="seg">{GENDERS.map(item => <button type="button" key={item.id} className={draft.gender === item.id ? 'on' : ''} onClick={() => set('gender', item.id)}>{item.label}</button>)}</div></div>
 
           <label className="field">Weight<div className="unit"><input type="number" min={30} max={150} value={draft.weightKg} onChange={num('weightKg')} /><span>kg</span></div></label>
-          <label className="field">Height<div className="unit"><input type="number" min={120} max={220} value={draft.heightCm} onChange={num('heightCm')} /><span>cm</span></div></label>
+          <label className="field">Height<div className="unit"><input type="number" min={120} max={220} value={draft.heightCm} onChange={num('heightCm')} /><span>cm</span></div>{draft.heightCm >= 120 && draft.weightKg >= 30 && <small className="bmi">BMI {bodyFor(draft).bmi} · {bodyFor(draft).category}</small>}</label>
           <label className="field">Usual training time<input type="time" value={draft.trainingTime} onChange={event => set('trainingTime', event.target.value || '06:00')} style={{ colorScheme: 'dark' }} /></label>
 
           <label className="field">Main event<select value={draft.event} onChange={event => set('event', event.target.value)}>{EVENTS.map(item => <option key={item}>{item}</option>)}</select></label>

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, Camera, Clock, Download, Footprints, MessageCircle, Pause, Play, PlayCircle, ScanLine, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, Camera, Clock, Download, Footprints, MessageCircle, Pause, Play, PlayCircle, ScanLine, TriangleAlert, Youtube } from 'lucide-react'
 import type { RunningAnalysis } from '../types'
 import { Capture } from '../components/Capture'
 import { PosePlayback } from '../components/PosePlayback'
 import { ScoreRing } from '../components/ui'
-import { drillsFor, footStrikeTalk, statusWord, talkFor, verdict } from '../lib/plainTalk'
+import { drillsFor, footStrikeTalk, statusWord, talkFor, verdict, videoLink } from '../lib/plainTalk'
 import type { SavedCheck } from '../lib/store'
 
 export const SAMPLE: SavedCheck = {
@@ -57,7 +57,7 @@ type ReportProps = { analysis: SavedCheck | RunningAnalysis; videoUrl: string | 
 
 export function Report({ analysis, videoUrl, onBack, onDownload, onAsk }: ReportProps) {
   const ordered = useMemo(() => [...analysis.metrics].sort((a, b) => a.score - b.score), [analysis.metrics])
-  const drills = useMemo(() => drillsFor(analysis.metrics).slice(0, 3), [analysis.metrics])
+  const drills = useMemo(() => drillsFor(analysis.metrics), [analysis.metrics])
   const [open, setOpen] = useState<string | null>(null)
   const [speaking, setSpeaking] = useState(false)
   const voice = typeof window !== 'undefined' && 'speechSynthesis' in window
@@ -146,6 +146,7 @@ export function Report({ analysis, videoUrl, onBack, onDownload, onAsk }: Report
               <h4>{drill.name}</h4>
               <span className="chip gold">{drill.dose}</span>
               <p>{drill.how}</p>
+              <a className="watch-link" href={videoLink(drill)} target="_blank" rel="noreferrer"><Youtube size={15} /> Watch how</a>
             </div>
           ))}
         </div>

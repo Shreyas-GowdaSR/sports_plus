@@ -35,8 +35,9 @@ export function Nutrition({ profile, session, plan, onChange, onAsk, onProfile }
     <div className="page">
       <div className="page-bar">
         <h1 className="page-title">Nutrition</h1>
-        <button className="chip" onClick={onProfile}>{profile.weightKg} kg · {DIET[profile.diet]}{profile.avoid.trim() ? ` · no ${profile.avoid.trim()}` : ''} <Pencil size={12} /></button>
+        <button className="chip" onClick={onProfile}>{profile.weightKg} kg · {profile.heightCm} cm · BMI {plan.body.bmi} · {DIET[profile.diet]}{profile.avoid.trim() ? ` · no ${profile.avoid.trim()}` : ''} <Pencil size={12} /></button>
       </div>
+      {plan.body.note && <p className="body-note">{plan.body.note}</p>}
 
       <section className="card controls">
         <div className="seg">{KINDS.map(kind => <button key={kind} className={session.kind === kind ? 'on' : ''} onClick={() => set({ kind, minutes: kind === 'rest' ? 0 : session.minutes || 45 })}>{SESSION_LABEL[kind]}</button>)}</div>

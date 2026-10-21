@@ -38,15 +38,20 @@ export function verdict(score: number) {
   return { word: 'Needs attention', line: 'A few things need fixing. Work on them before you increase speed or distance.' }
 }
 
-export type Drill = { name: string; dose: string; how: string }
+export type Drill = { name: string; dose: string; how: string; search: string }
 
 export const DRILLS: Record<MetricId, Drill[]> = {
-  posture:       [{ name: 'Wall lean march', dose: '2 × 20 sec', how: 'Lean on a wall with a straight body. March on the spot, knees up.' }, { name: 'Tall strides', dose: '4 × 15 sec', how: 'After an easy run, run fast but relaxed, staying tall.' }],
-  pelvis:        [{ name: 'Bridge march', dose: '2 × 8 each leg', how: 'Lie on your back, lift the hips, then lift one foot at a time. Keep the hips level.' }, { name: 'Single-leg stand', dose: '2 × 30 sec each leg', how: 'Stand on one leg, hips level. Hold a wall if needed.' }],
-  footPlacement: [{ name: 'Quick-feet strides', dose: '6 × 20 sec', how: 'Run with light, quick steps. Feet land under you. Walk 1 min between.' }, { name: 'Ankle march', dose: '2 × 15 m', how: 'March forward on your toes, placing each foot under your hips.' }],
-  head:          [{ name: 'Wall posture reset', dose: '3 × 3 slow breaths', how: 'Stand with your back on a wall. Gently tuck the chin and make the neck long.' }, { name: 'Look-ahead run', dose: '3 × 30 sec', how: 'During an easy run, fix your eyes on a point far ahead.' }],
-  armSwing:      [{ name: 'Seated arm swing', dose: '3 × 30 sec', how: 'Sit on the floor, elbows at 90°, swing arms front to back fast but relaxed.' }, { name: 'Arm-swing walk', dose: '2 × 30 sec', how: 'Walk briskly with relaxed arms swinging beside your body.' }],
-  symmetry:      [{ name: 'Step-down', dose: '2 × 6 each leg', how: 'Stand on a step, slowly lower the other heel to the floor. Knee over middle toe.' }, { name: 'Single-leg balance', dose: '2 × 30 sec each leg', how: 'Stand tall on one leg. Try with eyes closed when it gets easy.' }],
+  posture:       [{ name: 'Wall lean march', dose: '2 × 20 sec', how: 'Lean on a wall with a straight body. March on the spot, knees up.', search: 'wall lean march running drill' }, { name: 'Tall strides', dose: '4 × 15 sec', how: 'After an easy run, run fast but relaxed, staying tall.', search: 'running strides tall posture drill' }],
+  pelvis:        [{ name: 'Bridge march', dose: '2 × 8 each leg', how: 'Lie on your back, lift the hips, then lift one foot at a time. Keep the hips level.', search: 'glute bridge march exercise' }, { name: 'Single-leg stand', dose: '2 × 30 sec each leg', how: 'Stand on one leg, hips level. Hold a wall if needed.', search: 'single leg balance exercise runners' }],
+  footPlacement: [{ name: 'Quick-feet strides', dose: '6 × 20 sec', how: 'Run with light, quick steps. Feet land under you. Walk 1 min between.', search: 'quick feet running drill' }, { name: 'Ankle march', dose: '2 × 15 m', how: 'March forward on your toes, placing each foot under your hips.', search: 'ankling running drill' }],
+  head:          [{ name: 'Wall posture reset', dose: '3 × 3 slow breaths', how: 'Stand with your back on a wall. Gently tuck the chin and make the neck long.', search: 'wall chin tuck posture exercise' }, { name: 'Look-ahead run', dose: '3 × 30 sec', how: 'During an easy run, fix your eyes on a point far ahead.', search: 'running head position gaze tips' }],
+  armSwing:      [{ name: 'Seated arm swing', dose: '3 × 30 sec', how: 'Sit on the floor, elbows at 90°, swing arms front to back fast but relaxed.', search: 'seated arm swing running drill' }, { name: 'Arm-swing walk', dose: '2 × 30 sec', how: 'Walk briskly with relaxed arms swinging beside your body.', search: 'running arm swing drill' }],
+  symmetry:      [{ name: 'Step-down', dose: '2 × 6 each leg', how: 'Stand on a step, slowly lower the other heel to the floor. Knee over middle toe.', search: 'lateral step down exercise knee control' }, { name: 'Single-leg balance', dose: '2 × 30 sec each leg', how: 'Stand tall on one leg. Try with eyes closed when it gets easy.', search: 'single leg balance exercise eyes closed' }],
+}
+
+/** YouTube search for a drill: always resolves and shows several demonstrations. */
+export function videoLink(drill: Drill) {
+  return `https://www.youtube.com/results?search_query=${encodeURIComponent(drill.search)}`
 }
 
 /** The two weakest checks decide the drills: never more than four. */

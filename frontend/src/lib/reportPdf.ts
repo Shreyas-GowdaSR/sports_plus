@@ -1,4 +1,4 @@
-import { drillsFor, footStrikeTalk, statusWord, talkFor, verdict } from './plainTalk'
+import { drillsFor, footStrikeTalk, statusWord, talkFor, verdict, videoLink } from './plainTalk'
 import type { SavedCheck } from './store'
 
 type PdfLine = { text: string; kind: 'title' | 'subtitle' | 'section' | 'body' | 'spacer' }
@@ -59,7 +59,10 @@ function makeLines(analysis: SavedCheck, athlete: string): PdfLine[] {
   lines.push({ text: `${strike.type}. ${strike.landing}`, kind: 'body' })
   lines.push({ text: '', kind: 'spacer' })
   lines.push({ text: 'DRILLS FOR THE NEXT 2 WEEKS', kind: 'section' })
-  drillsFor(analysis.metrics).forEach(drill => lines.push({ text: `${drill.name} (${drill.dose}) - ${drill.how}`, kind: 'body' }))
+  drillsFor(analysis.metrics).forEach(drill => {
+    lines.push({ text: `${drill.name} (${drill.dose}) - ${drill.how}`, kind: 'body' })
+    lines.push({ text: `Video: ${videoLink(drill)}`, kind: 'subtitle' })
+  })
   lines.push({ text: '', kind: 'spacer' })
   lines.push({ text: 'This is a video-based form check, not a medical diagnosis. If something hurts, see a doctor or physio.', kind: 'subtitle' })
   return lines

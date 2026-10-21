@@ -9,9 +9,21 @@ export function defaultSession(profile: AthleteProfile): Session {
 }
 
 /**
- * Turns sports-nutrition targets (ACSM / IOC consensus ranges) into Indian home
- * foods and household measures. The athlete sees foods, amounts and timing;
- * the gram targets stay behind "Show the numbers".
+ * Turns sports-nutrition targets into Indian home foods and household measures.
+ * The athlete sees foods, amounts and timing; gram targets stay behind "Show the numbers".
+ *
+ * Sources for every range used below:
+ * - Thomas, Erdman & Burke. ACSM / Academy of Nutrition and Dietetics / Dietitians of Canada
+ *   joint position, "Nutrition and Athletic Performance", Med Sci Sports Exerc 2016:
+ *   daily carbs 3–5 g/kg (light) · 5–7 (≈1 h/day) · 6–10 (1–3 h/day); protein 1.2–2.0 g/kg/day;
+ *   1–4 g/kg carbs 1–4 h before; 30–60 g/h during 1–2.5 h, up to 90 g/h beyond;
+ *   recovery 1.0–1.2 g/kg carbs + 0.25–0.3 g/kg protein; fluid 5–7 ml/kg ≥2–4 h before,
+ *   0.4–0.8 L/h during, 1.25–1.5 L per kg body mass lost after; sodium 20–30 mmol/L.
+ * - EFSA 2010 adequate water intake (2.5 L/day men, 2.0 L/day women, ~80% from drinks).
+ *
+ * Carbs and protein are scaled to a "plan weight": actual weight when BMI ≤ 25, otherwise
+ * the adjusted body weight (weight at BMI 25 + 40% of the excess), the standard clinical
+ * correction so heavier athletes are not over-fed. Fluids use actual weight.
  *
  * Food values are rounded household approximations, e.g. 1 idli ≈ 8 g carbs,
  * 1 banana ≈ 27 g, 1 cup cooked rice ≈ 45 g, 1 katori dal ≈ 7 g protein.
@@ -19,8 +31,11 @@ export function defaultSession(profile: AthleteProfile): Session {
 
 export type FuelStep = { when: string; lines: string[]; choice?: boolean; note?: string }
 
+export type Body = { bmi: number; category: string; planWeight: number; note?: string }
+
 export type FuelPlan = {
   label: string
+  body: Body
   summary: string
   before: FuelStep[]
   during: FuelStep[]
@@ -31,7 +46,6 @@ export type FuelPlan = {
 
 type Food = { text: string; keys: string[]; not?: Diet[] }
 
-const DAIRY: Diet[] = ['vegan']
 const MEAT: Diet[] = ['veg', 'egg', 'vegan']
 
 function blocked(food: Food, profile: AthleteProfile) {
@@ -43,7 +57,6 @@ function blocked(food: Food, profile: AthleteProfile) {
 const roundHalf = (value: number) => Math.round(value * 2) / 2
 const round50 = (value: number) => Math.round(value / 50) * 50
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 const glasses = (ml: number) => {
   const g = roundHalf(ml / 250)
   return g <= 0.5 ? 'half a glass' : g === 1 ? '1 glass' : `${g} glasses`
@@ -115,14 +128,14 @@ const PROTEIN: Record<Diet, ProteinFood[]> = {
     { text: '50 g paneer', keys: ['paneer', 'dairy'], protein: 9 },
     { text: '1 katori curd', keys: ['curd', 'dahi', 'dairy'], protein: 5 },
     { text: '1 small katori soya chunks', keys: ['soya', 'soy'], protein: 13 },
-    { text: '1 katori sprouts', keys: ['sprout', 'moong'], protein: 6 },
+    { text: '1 katori sprouts', keys: ['sprout', 'moong'], protein: 5 },
   ],
   vegan: [
     { text: '1 small katori soya chunks', keys: ['soya', 'soy'], protein: 13 },
     { text: '1 katori dal', keys: ['dal'], protein: 7 },
     { text: '1 katori chana or rajma', keys: ['chana', 'rajma', 'chickpea'], protein: 7 },
     { text: '100 g tofu', keys: ['tofu', 'soy'], protein: 10 },
-    { text: '1 katori sprouts', keys: ['sprout', 'moong'], protein: 6 },
+    { text: '1 katori sprouts', keys: ['sprout', 'moong'], protein: 5 },
   ],
 }
 
@@ -155,9 +168,25 @@ function recoveryDrink(profile: AthleteProfile) {
   return '1 glass milk or sweet lassi + 1 banana'
 }
 
+// ── Body ─────────────────────────────────────────────────────
+export function bodyFor(profile: AthleteProfile): Body {
+  const metres = profile.heightCm / 100
+  const bmi = Math.round(profile.weightKg / (metres * metres) * 10) / 10
+  const atBmi25 = 25 * metres * metres
+  if (bmi < 18.5) return { bmi, category: 'Underweight', planWeight: profile.weightKg, note: 'BMI is low. Never skip meals around training, and see a sports dietitian.' }
+  if (bmi <= 25) return { bmi, category: 'Healthy', planWeight: profile.weightKg }
+  const planWeight = Math.round(atBmi25 + 0.4 * (profile.weightKg - atBmi25))
+  return {
+    bmi, category: bmi < 30 ? 'Overweight' : 'Obese', planWeight,
+    note: `Food amounts use ${planWeight} kg, adjusted for BMI. Very muscular? BMI over-reads, so ask a dietitian.`,
+  }
+}
+
 // ── Plan ─────────────────────────────────────────────────────
 export function buildFuelPlan(profile: AthleteProfile, session: Session): FuelPlan {
-  const kg = profile.weightKg
+  const body = bodyFor(profile)
+  const kg = body.planWeight
+  const fluidKg = profile.weightKg
   const { kind, minutes, weather } = session
   const rest = kind === 'rest'
   const hard = kind === 'hard' || kind === 'race'
@@ -170,9 +199,13 @@ export function buildFuelPlan(profile: AthleteProfile, session: Session): FuelPl
   const preGkg = rest ? 0 : kind === 'race' || minutes >= 120 ? 2 : long || hard ? 1.5 : minutes > 45 ? 1 : 0
   const preCarbs = Math.round(preGkg * kg)
   const duringCarbs = rest || minutes < 60 ? 0 : minutes < 90 ? 30 : minutes <= 150 ? 45 : 60
-  const recoveryProtein = clamp(Math.round(0.3 * kg), 15, 35)
+  const recoveryProtein = clamp(Math.round(0.3 * kg), 15, 30)
   const recoveryCarbs = Math.round((hard || long ? 1 : 0.6) * kg)
-  const [rateLo, rateHi] = weather === 'hot' ? [600, 900] : weather === 'cool' ? [400, 600] : [500, 700]
+  // 0.4–0.8 L/h for a typical adult, scaled with body size (sweat rate tracks body mass).
+  const sweatScale = clamp(fluidKg / 65, 0.8, 1.2)
+  const [baseLo, baseHi] = weather === 'hot' ? [600, 800] : weather === 'cool' ? [400, 550] : [450, 700]
+  // Capped so the plan never pushes over-drinking (risk of low blood sodium).
+  const rateLo = round50(baseLo * sweatScale); const rateHi = Math.min(850, round50(baseHi * sweatScale))
   const salty = minutes >= 90 || weather === 'hot'
 
   // ── Before
@@ -196,7 +229,7 @@ export function buildFuelPlan(profile: AthleteProfile, session: Session): FuelPl
   if (rest) during.push({ when: 'Today', lines: ['Nothing extra.'] })
   else if (duringCarbs === 0) during.push({ when: 'During', lines: ['Only water. No food needed for this session.'] })
   else {
-    const drink = 'water + 2 tbsp glucose or sugar + a pinch of salt + half a lemon'
+    const drink = 'water + 2 tbsp glucose or sugar + ⅛ tsp salt + half a lemon'
     const lines = duringCarbs === 30
       ? [`500 ml energy drink (${drink})`, top ? `${top.text}, in small bites` : '1 energy gel']
       : duringCarbs === 45
@@ -225,11 +258,13 @@ export function buildFuelPlan(profile: AthleteProfile, session: Session): FuelPl
 
   // ── Water
   const water: FuelStep[] = []
-  const dayLo = Math.round(kg * 0.035 * 10) / 10 + (weather === 'hot' ? 0.5 : 0)
-  const dayHi = Math.round(kg * 0.045 * 10) / 10 + (weather === 'hot' ? 0.5 : 0)
+  // 30–35 ml/kg/day drinking water, kept within the EFSA adult range.
+  const female = profile.gender === 'female'
+  const dayLo = clamp(fluidKg * 0.03, female ? 1.6 : 2.0, 3.0) + (weather === 'hot' ? 0.5 : 0)
+  const dayHi = clamp(fluidKg * 0.035, female ? 1.9 : 2.3, 3.5) + (weather === 'hot' ? 0.5 : 0)
   if (!rest) {
-    const preLo = round50(kg * 5); const preHi = round50(kg * 7)
-    water.push({ when: '2 hours before', lines: [`${preLo}–${preHi} ml (about ${glasses((preLo + preHi) / 2)})`, 'A few sips just before you start'] })
+    const preLo = round50(fluidKg * 5); const preHi = round50(fluidKg * 7)
+    water.push({ when: '2–4 hours before', lines: [`${preLo}–${preHi} ml (about ${glasses((preLo + preHi) / 2)})`, 'A few sips just before you start'] })
     if (minutes < 30) water.push({ when: 'During', lines: ['Not needed. Sip if thirsty.'] })
     else {
       const sipLo = round50(rateLo / 3.5); const sipHi = round50(rateHi / 3.5)
@@ -237,21 +272,24 @@ export function buildFuelPlan(profile: AthleteProfile, session: Session): FuelPl
       water.push({
         when: 'During',
         lines: [`${sipLo}–${sipHi} ml every 15–20 min`, `About ${total >= 1000 ? `${(total / 1000).toFixed(1)} litres` : `${total} ml`} in total for this session`],
-        note: salty ? 'Add salt: use ORS, or nimbu-pani with a pinch of salt and sugar, for at least half of it. Plain water alone is not enough for long or hot runs.' : 'Do not force water. Drinking far too much plain water is also harmful.',
+        note: salty ? 'Add salt: use ORS, or nimbu-pani with ⅛ tsp salt and sugar per 500 ml, for at least half of it. Plain water alone is not enough for long or hot runs.' : 'Do not force water. Drinking far too much plain water is also harmful.',
       })
     }
-    water.push({ when: 'After', lines: ['500–750 ml in the first hour', profile.diet === 'vegan' ? 'Coconut water or salted nimbu-pani is good' : 'Buttermilk with salt or coconut water is good'], note: 'Keep sipping until your urine is light yellow.' })
+    water.push({ when: 'After', lines: ['500–750 ml in the first hour', profile.diet === 'vegan' ? 'Coconut water or salted nimbu-pani is good' : 'Buttermilk with salt or coconut water is good'], note: 'Keep sipping until your urine is light yellow. If you weigh yourself before and after: drink 1.5 L for every 1 kg lost.' })
   }
   water.push({ when: 'Whole day', lines: [`About ${dayLo.toFixed(1)}–${dayHi.toFixed(1)} litres, spread across the day`], note: rest ? undefined : 'This is on top of what you drink during training.' })
 
-  const dayCarbs = rest ? [3, 5] : kind === 'race' || long ? [6, 8] : hard ? [5, 7] : [4, 6]
+  const dayCarbs = rest ? [3, 5] : kind === 'race' || long ? [6, 8] : hard || minutes >= 60 ? [5, 7] : [3, 5]
   const numbers = [
+    { label: 'BMI', value: `${body.bmi} · ${body.category}` },
+    { label: 'Plan weight', value: `${kg} kg` },
     { label: 'Carbs before', value: preCarbs ? `${preCarbs} g` : 'None needed' },
     { label: 'Carbs during', value: duringCarbs ? `${duringCarbs} g / hour` : 'None needed' },
     { label: 'Protein after', value: `${recoveryProtein} g` },
     { label: 'Fluid during', value: rest || minutes < 30 ? '—' : `${rateLo}–${rateHi} ml / hour` },
     { label: 'Carbs for the day', value: `${Math.round(dayCarbs[0] * kg)}–${Math.round(dayCarbs[1] * kg)} g` },
-    { label: 'Protein for the day', value: `${Math.round(1.4 * kg)}–${Math.round(1.7 * kg)} g` },
+    { label: 'Protein for the day', value: `${Math.round(1.4 * kg)}–${Math.round(1.8 * kg)} g` },
+    { label: 'Water for the day', value: `${dayLo.toFixed(1)}–${dayHi.toFixed(1)} L` },
   ]
 
   const summary = rest
@@ -262,13 +300,13 @@ export function buildFuelPlan(profile: AthleteProfile, session: Session): FuelPl
         ? 'A light meal before, water during, and a balanced meal after.'
         : 'A short session. Water is enough; eat a normal meal after.'
 
-  return { label, summary, before, during, after, water, numbers }
+  return { label, body, summary, before, during, after, water, numbers }
 }
 
 /** Plain text version, sent to the AI coach as the athlete's calculated plan. */
 export function planAsText(plan: FuelPlan) {
   const block = (title: string, steps: FuelStep[]) =>
     `${title}:\n${steps.map(step => `- ${step.when}: ${step.lines.join(step.choice ? ' OR ' : '; ')}${step.note ? ` (${step.note})` : ''}`).join('\n')}`
-  return [plan.label, block('BEFORE', plan.before), block('DURING', plan.during), block('AFTER', plan.after), block('WATER', plan.water),
+  return [plan.label, `BODY: BMI ${plan.body.bmi} (${plan.body.category}); food amounts use plan weight ${plan.body.planWeight} kg, water uses actual weight`, block('BEFORE', plan.before), block('DURING', plan.during), block('AFTER', plan.after), block('WATER', plan.water),
     `TARGETS (hidden unless athlete asks): ${plan.numbers.map(n => `${n.label} ${n.value}`).join('; ')}`].join('\n')
 }
