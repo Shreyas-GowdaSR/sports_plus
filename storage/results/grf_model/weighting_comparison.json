@@ -1,0 +1,87 @@
+{
+  "purpose": "Paired comparison of predeclared training-weighting strategies; not used to choose the model.",
+  "locked_test_subjects": [
+    "009",
+    "015",
+    "018",
+    "021",
+    "022",
+    "026",
+    "028",
+    "031"
+  ],
+  "development_subject_count": 31,
+  "locked_test_sample_count": 1668,
+  "configuration": {
+    "estimator": "HistGradientBoostingRegressor",
+    "learning_rate": 0.05,
+    "max_iter": 200,
+    "max_leaf_nodes": 31,
+    "l2_regularization": 1.0,
+    "random_state": 42
+  },
+  "locked_test": {
+    "hist_gradient_boosting_wide": {
+      "pooled_mae_n_per_kg": 1.2537336499711524,
+      "pooled_rmse_n_per_kg": 1.7431919302670145,
+      "pooled_r2": 0.9571454991344864,
+      "mean_subject_mae_n_per_kg": 1.2274690789596305,
+      "median_subject_mae_n_per_kg": 1.0850247607207177,
+      "subject_mae": {
+        "009": 1.3012557732261774,
+        "015": 0.9499035341856619,
+        "018": 0.9388258897501359,
+        "021": 1.105389708369297,
+        "022": 2.3010178229866685,
+        "026": 1.099312238800336,
+        "028": 1.0707372826410992,
+        "031": 1.0533103817176677
+      }
+    },
+    "hist_gradient_boosting_subject_balanced": {
+      "pooled_mae_n_per_kg": 1.2630410601798256,
+      "pooled_rmse_n_per_kg": 1.7321926019876621,
+      "pooled_r2": 0.957684606239388,
+      "mean_subject_mae_n_per_kg": 1.233508537552726,
+      "median_subject_mae_n_per_kg": 1.133068621799017,
+      "subject_mae": {
+        "009": 1.28397729999378,
+        "015": 0.873957048896584,
+        "018": 0.9661352689981997,
+        "021": 1.2787673149354768,
+        "022": 2.1864073490783884,
+        "026": 1.1294731013791175,
+        "028": 1.136664142218916,
+        "031": 1.012686774921345
+      }
+    }
+  },
+  "subject_mae": {
+    "hist_gradient_boosting_wide": {
+      "009": 1.3012557732261774,
+      "015": 0.9499035341856619,
+      "018": 0.9388258897501359,
+      "021": 1.105389708369297,
+      "022": 2.3010178229866685,
+      "026": 1.099312238800336,
+      "028": 1.0707372826410992,
+      "031": 1.0533103817176677
+    },
+    "hist_gradient_boosting_subject_balanced": {
+      "009": 1.28397729999378,
+      "015": 0.873957048896584,
+      "018": 0.9661352689981997,
+      "021": 1.2787673149354768,
+      "022": 2.1864073490783884,
+      "026": 1.1294731013791175,
+      "028": 1.136664142218916,
+      "031": 1.012686774921345
+    }
+  },
+  "paired_mean_subject_mae_difference_n_per_kg": 0.006039458593095501,
+  "paired_difference_bootstrap_95pct_ci_n_per_kg": [
+    -0.04885134132303706,
+    0.06628600197910108
+  ],
+  "difference_sign": "balanced minus unweighted; negative favors participant-balanced training"
+}

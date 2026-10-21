@@ -1,0 +1,20 @@
+# Dependencies and builds
+node_modules/
+.pnpm-store/
+frontend/dist/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Secrets: the Gemini key lives here
+.env
+.env.local
+.env.*.local
+
+# Over GitHub's 100 MB limit; regenerate with research/train_grf_model.py
+storage/results/grf_model/model.joblib
+
+# Local tooling
+.claude/
+*.log

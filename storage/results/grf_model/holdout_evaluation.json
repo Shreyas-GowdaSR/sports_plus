@@ -1,0 +1,533 @@
+{
+  "experiment": "locked subject-level test with development-only model selection",
+  "source": "Fukuchi et al. 2017, Figshare DOI 10.6084/m9.figshare.4543435.v5",
+  "license": "CC BY 4.0",
+  "target": "vertical ground-reaction force GRFy (N/kg)",
+  "features": [
+    "hipAngX_lag-2",
+    "hipAngX_lag-1",
+    "hipAngX_lag+0",
+    "hipAngX_lag+1",
+    "hipAngX_lag+2",
+    "hipAngY_lag-2",
+    "hipAngY_lag-1",
+    "hipAngY_lag+0",
+    "hipAngY_lag+1",
+    "hipAngY_lag+2",
+    "hipAngZ_lag-2",
+    "hipAngZ_lag-1",
+    "hipAngZ_lag+0",
+    "hipAngZ_lag+1",
+    "hipAngZ_lag+2",
+    "kneeAngX_lag-2",
+    "kneeAngX_lag-1",
+    "kneeAngX_lag+0",
+    "kneeAngX_lag+1",
+    "kneeAngX_lag+2",
+    "kneeAngY_lag-2",
+    "kneeAngY_lag-1",
+    "kneeAngY_lag+0",
+    "kneeAngY_lag+1",
+    "kneeAngY_lag+2",
+    "kneeAngZ_lag-2",
+    "kneeAngZ_lag-1",
+    "kneeAngZ_lag+0",
+    "kneeAngZ_lag+1",
+    "kneeAngZ_lag+2",
+    "ankleAngX_lag-2",
+    "ankleAngX_lag-1",
+    "ankleAngX_lag+0",
+    "ankleAngX_lag+1",
+    "ankleAngX_lag+2",
+    "ankleAngY_lag-2",
+    "ankleAngY_lag-1",
+    "ankleAngY_lag+0",
+    "ankleAngY_lag+1",
+    "ankleAngY_lag+2",
+    "ankleAngZ_lag-2",
+    "ankleAngZ_lag-1",
+    "ankleAngZ_lag+0",
+    "ankleAngZ_lag+1",
+    "ankleAngZ_lag+2",
+    "speed_m_s",
+    "gait_phase",
+    "side_is_left"
+  ],
+  "quality_control": {
+    "source_trials": 202,
+    "force_rows_outside_50_N_per_kg": 404,
+    "usable_source_trials": 198,
+    "subjects": 39,
+    "samples_after_qc": 7360
+  },
+  "locked_test_subjects": [
+    "009",
+    "015",
+    "018",
+    "021",
+    "022",
+    "026",
+    "028",
+    "031"
+  ],
+  "development_subjects": [
+    "001",
+    "002",
+    "003",
+    "004",
+    "005",
+    "006",
+    "007",
+    "008",
+    "010",
+    "011",
+    "012",
+    "013",
+    "014",
+    "016",
+    "017",
+    "019",
+    "020",
+    "023",
+    "024",
+    "025",
+    "027",
+    "029",
+    "030",
+    "032",
+    "033",
+    "034",
+    "035",
+    "036",
+    "037",
+    "038",
+    "039"
+  ],
+  "development_samples": 5692,
+  "locked_test_samples": 1668,
+  "model_selection_metric": "mean per-subject MAE, averaged over 4-fold GroupKFold within development cohort",
+  "development_cv": {
+    "phase_speed_ridge": {
+      "mean_grouped_cv_subject_mae_n_per_kg": 7.154475092887878,
+      "fold_subject_mae_n_per_kg": [
+        7.074429512023926,
+        7.264400482177734,
+        7.062520503997803,
+        7.216549873352051
+      ]
+    },
+    "kinematic_ridge": {
+      "mean_grouped_cv_subject_mae_n_per_kg": 2.0699144303798676,
+      "fold_subject_mae_n_per_kg": [
+        2.0681850910186768,
+        1.8901026248931885,
+        2.6151938438415527,
+        1.7061761617660522
+      ]
+    },
+    "extra_trees_leaf1": {
+      "mean_grouped_cv_subject_mae_n_per_kg": 1.43310091384719,
+      "fold_subject_mae_n_per_kg": [
+        1.5031447399050097,
+        1.4972231848546305,
+        1.4997418321985965,
+        1.2322938984305227
+      ]
+    },
+    "extra_trees_leaf2": {
+      "mean_grouped_cv_subject_mae_n_per_kg": 1.4367990062586675,
+      "fold_subject_mae_n_per_kg": [
+        1.5265129578306325,
+        1.4895357071693207,
+        1.5059290988435512,
+        1.2252182611911655
+      ]
+    },
+    "random_forest_leaf2": {
+      "mean_grouped_cv_subject_mae_n_per_kg": 1.374358498035757,
+      "fold_subject_mae_n_per_kg": [
+        1.5144129275159122,
+        1.3941531409723493,
+        1.432731634428759,
+        1.1561362892260079
+      ]
+    },
+    "hist_gradient_boosting": {
+      "mean_grouped_cv_subject_mae_n_per_kg": 1.3576270097081793,
+      "fold_subject_mae_n_per_kg": [
+        1.5442803173027517,
+        1.3609545756062045,
+        1.429005232350036,
+        1.0962679135737254
+      ]
+    },
+    "hist_gradient_boosting_wide": {
+      "mean_grouped_cv_subject_mae_n_per_kg": 1.3231591589948402,
+      "fold_subject_mae_n_per_kg": [
+        1.5123848389867622,
+        1.3365405838374707,
+        1.329492230300597,
+        1.1142189828545304
+      ]
+    },
+    "hist_gradient_boosting_subject_balanced": {
+      "mean_grouped_cv_subject_mae_n_per_kg": 1.2864882574862193,
+      "fold_subject_mae_n_per_kg": [
+        1.366120120569148,
+        1.2659185538683457,
+        1.3770768546817231,
+        1.1368375008256595
+      ]
+    },
+    "gradient_boosting": {
+      "mean_grouped_cv_subject_mae_n_per_kg": 1.673840449479866,
+      "fold_subject_mae_n_per_kg": [
+        1.927725350725066,
+        1.6223907439291365,
+        1.8927874670801619,
+        1.2524582361850984
+      ]
+    },
+    "mlp_128_64": {
+      "mean_grouped_cv_subject_mae_n_per_kg": 2.0588151812553406,
+      "fold_subject_mae_n_per_kg": [
+        2.2653603553771973,
+        1.9079620838165283,
+        2.379678249359131,
+        1.6822600364685059
+      ]
+    }
+  },
+  "selected_model": "hist_gradient_boosting_subject_balanced",
+  "locked_test": {
+    "hist_gradient_boosting_subject_balanced": {
+      "pooled_mae_n_per_kg": 1.2630410601798256,
+      "pooled_rmse_n_per_kg": 1.7321926019876621,
+      "pooled_r2": 0.957684606239388,
+      "mean_subject_mae_n_per_kg": 1.233508537552726,
+      "median_subject_mae_n_per_kg": 1.133068621799017,
+      "subject_mae": {
+        "009": 1.28397729999378,
+        "015": 0.873957048896584,
+        "018": 0.9661352689981997,
+        "021": 1.2787673149354768,
+        "022": 2.1864073490783884,
+        "026": 1.1294731013791175,
+        "028": 1.136664142218916,
+        "031": 1.012686774921345
+      },
+      "mean_subject_mae_bootstrap_95pct_ci_n_per_kg": [
+        1.0220133577452917,
+        1.53275761933238
+      ]
+    },
+    "kinematic_ridge": {
+      "pooled_mae_n_per_kg": 2.070505142211914,
+      "pooled_rmse_n_per_kg": 2.6293411254882812,
+      "pooled_r2": 0.9025010466575623,
+      "mean_subject_mae_n_per_kg": 2.062307357788086,
+      "median_subject_mae_n_per_kg": 1.9604496955871582,
+      "subject_mae": {
+        "009": 1.7728277444839478,
+        "015": 1.2124905586242676,
+        "018": 1.4843064546585083,
+        "021": 1.8709927797317505,
+        "022": 3.448984146118164,
+        "026": 2.0499064922332764,
+        "028": 2.4691290855407715,
+        "031": 2.189821481704712
+      }
+    },
+    "phase_speed_ridge": {
+      "pooled_mae_n_per_kg": 7.057188510894775,
+      "pooled_rmse_n_per_kg": 8.031512260437012,
+      "pooled_r2": 0.09029483795166016,
+      "mean_subject_mae_n_per_kg": 7.033881187438965,
+      "median_subject_mae_n_per_kg": 7.05025577545166,
+      "subject_mae": {
+        "009": 7.15597677230835,
+        "015": 6.6983113288879395,
+        "018": 7.358155250549316,
+        "021": 7.128892421722412,
+        "022": 6.822519779205322,
+        "026": 7.459583759307861,
+        "028": 6.971619129180908,
+        "031": 6.675989627838135
+      }
+    }
+  },
+  "feature_ablation": {
+    "purpose": "Secondary, predeclared feature contribution analysis; not used to tune the primary model.",
+    "results": {
+      "full_context_and_temporal_angles": {
+        "description": "All angle axes/joints at five gait points plus speed, phase, side",
+        "feature_count": 48,
+        "development_cv_mean_subject_mae_n_per_kg": 1.2864882574862193,
+        "development_cv_fold_subject_mae_n_per_kg": [
+          1.366120120569148,
+          1.2659185538683457,
+          1.3770768546817231,
+          1.1368375008256595
+        ],
+        "locked_test": {
+          "pooled_mae_n_per_kg": 1.2630410601798256,
+          "pooled_rmse_n_per_kg": 1.7321926019876621,
+          "pooled_r2": 0.957684606239388,
+          "mean_subject_mae_n_per_kg": 1.233508537552726,
+          "median_subject_mae_n_per_kg": 1.133068621799017,
+          "subject_mae": {
+            "009": 1.28397729999378,
+            "015": 0.873957048896584,
+            "018": 0.9661352689981997,
+            "021": 1.2787673149354768,
+            "022": 2.1864073490783884,
+            "026": 1.1294731013791175,
+            "028": 1.136664142218916,
+            "031": 1.012686774921345
+          }
+        }
+      },
+      "ablation_center_only": {
+        "description": "Only same-point angles plus speed, phase, side",
+        "feature_count": 12,
+        "development_cv_mean_subject_mae_n_per_kg": 1.2607603378609178,
+        "development_cv_fold_subject_mae_n_per_kg": [
+          1.4235467279474578,
+          1.2105804006035723,
+          1.3161682946578288,
+          1.092745928234812
+        ],
+        "locked_test": {
+          "pooled_mae_n_per_kg": 1.2529539370920346,
+          "pooled_rmse_n_per_kg": 1.7270825339839169,
+          "pooled_r2": 0.9579339036758246,
+          "mean_subject_mae_n_per_kg": 1.2113198433851509,
+          "median_subject_mae_n_per_kg": 1.1585264619026479,
+          "subject_mae": {
+            "009": 1.312542629711775,
+            "015": 0.955497618362639,
+            "018": 0.9814918101114348,
+            "021": 1.261063383231854,
+            "022": 2.039415285714516,
+            "026": 1.2296060276977663,
+            "028": 1.0874468961075292,
+            "031": 0.8234950961436927
+          }
+        }
+      },
+      "ablation_angles_only": {
+        "description": "All angles and temporal context; no speed, phase, or side",
+        "feature_count": 45,
+        "development_cv_mean_subject_mae_n_per_kg": 2.0661007057450216,
+        "development_cv_fold_subject_mae_n_per_kg": [
+          2.212662336146263,
+          2.0859278665235506,
+          2.0532562526998435,
+          1.9125563676104291
+        ],
+        "locked_test": {
+          "pooled_mae_n_per_kg": 2.1317458457941405,
+          "pooled_rmse_n_per_kg": 2.877805017877093,
+          "pooled_r2": 0.8832037877532197,
+          "mean_subject_mae_n_per_kg": 2.086011847223568,
+          "median_subject_mae_n_per_kg": 1.7195036500702572,
+          "subject_mae": {
+            "009": 2.634485478109632,
+            "015": 1.3035859228551665,
+            "018": 1.3143596462376428,
+            "021": 1.7148237401756798,
+            "022": 4.581050081449939,
+            "026": 1.5647949992393584,
+            "028": 1.7241835599648343,
+            "031": 1.8508113497562904
+          }
+        }
+      },
+      "ablation_without_hip": {
+        "description": "Remove every hip-angle input from the full feature set",
+        "feature_count": 33,
+        "development_cv_mean_subject_mae_n_per_kg": 1.249661347503868,
+        "development_cv_fold_subject_mae_n_per_kg": [
+          1.3428964805596655,
+          1.2607728717029472,
+          1.2949584050366139,
+          1.1000176327162454
+        ],
+        "locked_test": {
+          "pooled_mae_n_per_kg": 1.3176069143283928,
+          "pooled_rmse_n_per_kg": 1.8184933412072184,
+          "pooled_r2": 0.9533631232863956,
+          "mean_subject_mae_n_per_kg": 1.293703290869686,
+          "median_subject_mae_n_per_kg": 1.1841692959284402,
+          "subject_mae": {
+            "009": 1.2913708061902576,
+            "015": 1.1868821311233386,
+            "018": 0.9427190734084808,
+            "021": 1.1814564607335416,
+            "022": 2.277227362469323,
+            "026": 1.2509514833796673,
+            "028": 1.0817594512056985,
+            "031": 1.137259558447179
+          }
+        }
+      },
+      "ablation_without_knee": {
+        "description": "Remove every knee-angle input from the full feature set",
+        "feature_count": 33,
+        "development_cv_mean_subject_mae_n_per_kg": 1.2423003355702025,
+        "development_cv_fold_subject_mae_n_per_kg": [
+          1.3072364164217278,
+          1.2366976804476155,
+          1.332648092352232,
+          1.0926191530592346
+        ],
+        "locked_test": {
+          "pooled_mae_n_per_kg": 1.248377094238979,
+          "pooled_rmse_n_per_kg": 1.6886624008657238,
+          "pooled_r2": 0.9597846646187178,
+          "mean_subject_mae_n_per_kg": 1.2217860616881728,
+          "median_subject_mae_n_per_kg": 1.16739924967155,
+          "subject_mae": {
+            "009": 1.235487395747477,
+            "015": 0.9901134543281601,
+            "018": 1.2053790802502307,
+            "021": 1.4449383380219567,
+            "022": 1.742076635404497,
+            "026": 1.0418205184412532,
+            "028": 1.1294194190928692,
+            "031": 0.9850536522189394
+          }
+        }
+      },
+      "ablation_without_ankle": {
+        "description": "Remove every ankle-angle input from the full feature set",
+        "feature_count": 33,
+        "development_cv_mean_subject_mae_n_per_kg": 1.3495915317730005,
+        "development_cv_fold_subject_mae_n_per_kg": [
+          1.5047374618985767,
+          1.3081638213338909,
+          1.4181891697894993,
+          1.167275674070035
+        ],
+        "locked_test": {
+          "pooled_mae_n_per_kg": 1.2862467882509943,
+          "pooled_rmse_n_per_kg": 1.7609548293869268,
+          "pooled_r2": 0.9562676858200346,
+          "mean_subject_mae_n_per_kg": 1.230941894294551,
+          "median_subject_mae_n_per_kg": 1.1974944620741588,
+          "subject_mae": {
+            "009": 1.4344562733134356,
+            "015": 0.8534570761753401,
+            "018": 1.0802642551094621,
+            "021": 1.1127006041242946,
+            "022": 1.9687820458718506,
+            "026": 1.282288320024023,
+            "028": 1.43364307490509,
+            "031": 0.6819435048329117
+          }
+        }
+      },
+      "ablation_only_hip": {
+        "description": "Hip angles only plus speed, phase, side",
+        "feature_count": 18,
+        "development_cv_mean_subject_mae_n_per_kg": 1.3257593923446729,
+        "development_cv_fold_subject_mae_n_per_kg": [
+          1.5742409374235795,
+          1.0919564782028426,
+          1.4185398781882212,
+          1.2183002755640477
+        ],
+        "locked_test": {
+          "pooled_mae_n_per_kg": 1.3597766628663057,
+          "pooled_rmse_n_per_kg": 1.8438816784772727,
+          "pooled_r2": 0.9520518201505906,
+          "mean_subject_mae_n_per_kg": 1.310964454741075,
+          "median_subject_mae_n_per_kg": 1.3130540973518086,
+          "subject_mae": {
+            "009": 1.1756470221198438,
+            "015": 0.8751753781913661,
+            "018": 1.4504611725837733,
+            "021": 1.046705360727097,
+            "022": 1.8278246818077726,
+            "026": 1.64594090008548,
+            "028": 1.6647469046794474,
+            "031": 0.8012142177338198
+          }
+        }
+      },
+      "ablation_only_knee": {
+        "description": "Knee angles only plus speed, phase, side",
+        "feature_count": 18,
+        "development_cv_mean_subject_mae_n_per_kg": 1.3326817672744786,
+        "development_cv_fold_subject_mae_n_per_kg": [
+          1.5838230063855794,
+          1.2694439362473686,
+          1.265349829177222,
+          1.2121102972877438
+        ],
+        "locked_test": {
+          "pooled_mae_n_per_kg": 1.2012943768040811,
+          "pooled_rmse_n_per_kg": 1.644547457784327,
+          "pooled_r2": 0.9618584051140242,
+          "mean_subject_mae_n_per_kg": 1.160230039664787,
+          "median_subject_mae_n_per_kg": 1.1403995720643048,
+          "subject_mae": {
+            "009": 1.2019291354037107,
+            "015": 1.0659776340711018,
+            "018": 1.0788700087248986,
+            "021": 0.7759833754526667,
+            "022": 1.846212332127616,
+            "026": 1.350474097803094,
+            "028": 1.2099658510199913,
+            "031": 0.7524278827152183
+          }
+        }
+      },
+      "ablation_only_ankle": {
+        "description": "Ankle angles only plus speed, phase, side",
+        "feature_count": 18,
+        "development_cv_mean_subject_mae_n_per_kg": 1.179979441234331,
+        "development_cv_fold_subject_mae_n_per_kg": [
+          1.3276552628415343,
+          1.1535763686594043,
+          1.2033491527899711,
+          1.035336980646414
+        ],
+        "locked_test": {
+          "pooled_mae_n_per_kg": 1.2676965753773786,
+          "pooled_rmse_n_per_kg": 1.7340933749432808,
+          "pooled_r2": 0.9575916880663748,
+          "mean_subject_mae_n_per_kg": 1.2301047192672894,
+          "median_subject_mae_n_per_kg": 1.1304373986571699,
+          "subject_mae": {
+            "009": 1.1658621446374782,
+            "015": 1.2788402170430293,
+            "018": 0.9799428811386768,
+            "021": 1.589475837876189,
+            "022": 1.8871319648389455,
+            "026": 0.928867015288527,
+            "028": 1.0950126526768615,
+            "031": 0.9157050406386082
+          }
+        }
+      }
+    },
+    "primary_model": "hist_gradient_boosting_subject_balanced",
+    "primary_configuration": "HistGradientBoostingRegressor; learning_rate=0.05; max_iter=200; max_leaf_nodes=31; l2_regularization=1.0",
+    "participant_balanced_training": true
+  },
+  "caveats": [
+    "Only eight participants are in the locked test cohort, so uncertainty is substantial.",
+    "Data are processed, trial-averaged laboratory kinematics; this is not a video model.",
+    "Features include two future gait-cycle samples, so this is an offline estimator, not causal real-time inference.",
+    "The participant bootstrap interval reflects only the small held-out cohort and is not an external-site interval."
+  ],
+  "selected_model_parameters": {
+    "learning_rate": 0.05,
+    "max_iter": 200,
+    "max_leaf_nodes": 31,
+    "l2_regularization": 1.0,
+    "random_state": 42
+  },
+  "selected_model_training": "Each development participant receives equal total sample weight."
+}

@@ -1,0 +1,256 @@
+{
+  "title": "A public data set of running biomechanics and the effects of running speed on lower extremity kinematics and kinetics",
+  "doi": "10.6084/m9.figshare.4543435.v5",
+  "license": "CC BY 4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "citation": "Fukuchi, Reginaldo; Fukuchi, Claudiane; Duarte, Marcos (2017). A public data set of running biomechanics and the effects of running speed on lower extremity kinematics and kinetics. figshare. Dataset. https://doi.org/10.6084/m9.figshare.4543435.v5",
+  "source_api": "https://api.figshare.com/v2/articles/4543435",
+  "files": [
+    {
+      "name": "RBDS004processed.txt",
+      "size_bytes": 131097,
+      "download_url": "https://ndownloader.figshare.com/files/7824949",
+      "md5": "a8809432856a9bf93bc7470689db331d"
+    },
+    {
+      "name": "RBDS005processed.txt",
+      "size_bytes": 130837,
+      "download_url": "https://ndownloader.figshare.com/files/7824952",
+      "md5": "38c1d69529fc577610e5e44ea3c9e041"
+    },
+    {
+      "name": "RBDS006processed.txt",
+      "size_bytes": 130114,
+      "download_url": "https://ndownloader.figshare.com/files/7824955",
+      "md5": "c078cb81bcc6c1df1b603d55ae3df815"
+    },
+    {
+      "name": "RBDS007processed.txt",
+      "size_bytes": 130474,
+      "download_url": "https://ndownloader.figshare.com/files/7824958",
+      "md5": "18290c1cf8dcad04941742f3176996ca"
+    },
+    {
+      "name": "RBDS008processed.txt",
+      "size_bytes": 130303,
+      "download_url": "https://ndownloader.figshare.com/files/7824961",
+      "md5": "f9a1987fa71eb8d0fe4fff172299e165"
+    },
+    {
+      "name": "RBDS009processed.txt",
+      "size_bytes": 129758,
+      "download_url": "https://ndownloader.figshare.com/files/7824964",
+      "md5": "1624e9e07f0b490fec9a3593127e568a"
+    },
+    {
+      "name": "RBDS010processed.txt",
+      "size_bytes": 129978,
+      "download_url": "https://ndownloader.figshare.com/files/7824967",
+      "md5": "470439f0624deca7744afe2d55492717"
+    },
+    {
+      "name": "RBDS011processed.txt",
+      "size_bytes": 129854,
+      "download_url": "https://ndownloader.figshare.com/files/7824970",
+      "md5": "b7da6c35ff6f24c6175f3c38cc07563f"
+    },
+    {
+      "name": "RBDS012processed.txt",
+      "size_bytes": 130160,
+      "download_url": "https://ndownloader.figshare.com/files/7824973",
+      "md5": "da65a7cee7b093b209424d5e8753ecc4"
+    },
+    {
+      "name": "RBDS013processed.txt",
+      "size_bytes": 129578,
+      "download_url": "https://ndownloader.figshare.com/files/7824976",
+      "md5": "c0dd693101b48013555769f149aa28bb"
+    },
+    {
+      "name": "RBDS014processed.txt",
+      "size_bytes": 130233,
+      "download_url": "https://ndownloader.figshare.com/files/7824979",
+      "md5": "599f8dc5617eecdad10add4babbad685"
+    },
+    {
+      "name": "RBDS015processed.txt",
+      "size_bytes": 131105,
+      "download_url": "https://ndownloader.figshare.com/files/7824982",
+      "md5": "9b394fade557415ce7f2ba7f8e618805"
+    },
+    {
+      "name": "RBDS016processed.txt",
+      "size_bytes": 130306,
+      "download_url": "https://ndownloader.figshare.com/files/7824985",
+      "md5": "c8c65da61b3294573012089ebaaee4d9"
+    },
+    {
+      "name": "RBDS017processed.txt",
+      "size_bytes": 130072,
+      "download_url": "https://ndownloader.figshare.com/files/7824988",
+      "md5": "1963b147a02ce37c3aaf28b031eecf59"
+    },
+    {
+      "name": "RBDS018processed.txt",
+      "size_bytes": 129093,
+      "download_url": "https://ndownloader.figshare.com/files/7824991",
+      "md5": "43b4f369ad2985dc8a42106080262258"
+    },
+    {
+      "name": "RBDS019processed.txt",
+      "size_bytes": 129324,
+      "download_url": "https://ndownloader.figshare.com/files/7824994",
+      "md5": "18112c39dc08e0a4e9ef4f447105305c"
+    },
+    {
+      "name": "RBDS020processed.txt",
+      "size_bytes": 129567,
+      "download_url": "https://ndownloader.figshare.com/files/7824997",
+      "md5": "d81c796be6bf3632a13dcaae624b05c1"
+    },
+    {
+      "name": "RBDS021processed.txt",
+      "size_bytes": 129282,
+      "download_url": "https://ndownloader.figshare.com/files/7825000",
+      "md5": "23ac8dc1229118b27ec76ccf4c2f544e"
+    },
+    {
+      "name": "RBDS022processed.txt",
+      "size_bytes": 129871,
+      "download_url": "https://ndownloader.figshare.com/files/7825003",
+      "md5": "8fcb601104bd77f2dc0cbf9f6255d339"
+    },
+    {
+      "name": "RBDS023processed.txt",
+      "size_bytes": 130109,
+      "download_url": "https://ndownloader.figshare.com/files/7825006",
+      "md5": "d9b2aa780baedb048b318bdcb35d19da"
+    },
+    {
+      "name": "RBDS024processed.txt",
+      "size_bytes": 130227,
+      "download_url": "https://ndownloader.figshare.com/files/7825009",
+      "md5": "5fb4a5bdbf206622d4bb85a44cd7fde8"
+    },
+    {
+      "name": "RBDS025processed.txt",
+      "size_bytes": 129502,
+      "download_url": "https://ndownloader.figshare.com/files/7825012",
+      "md5": "f16855f3ab3858b05c6b07ce23811505"
+    },
+    {
+      "name": "RBDS026processed.txt",
+      "size_bytes": 129848,
+      "download_url": "https://ndownloader.figshare.com/files/7825015",
+      "md5": "35719a4670598d2c20df5f585d648d17"
+    },
+    {
+      "name": "RBDS027processed.txt",
+      "size_bytes": 129545,
+      "download_url": "https://ndownloader.figshare.com/files/7825018",
+      "md5": "100cd9d30dd8d17cfb271fd65165153e"
+    },
+    {
+      "name": "RBDS028processed.txt",
+      "size_bytes": 129516,
+      "download_url": "https://ndownloader.figshare.com/files/7825021",
+      "md5": "9a2659ce1d4a7b70b05944c3325c1fe7"
+    },
+    {
+      "name": "RBDS001processed.txt",
+      "size_bytes": 130438,
+      "download_url": "https://ndownloader.figshare.com/files/7825024",
+      "md5": "5ff0544b39c67cf8640c5aef4a804d50"
+    },
+    {
+      "name": "RBDS002processed.txt",
+      "size_bytes": 130005,
+      "download_url": "https://ndownloader.figshare.com/files/7825027",
+      "md5": "cfd13771047b910b9719b0f212cf55f2"
+    },
+    {
+      "name": "RBDS003processed.txt",
+      "size_bytes": 130231,
+      "download_url": "https://ndownloader.figshare.com/files/7825030",
+      "md5": "957b96d3424050fc8924aca794eb6ea0"
+    },
+    {
+      "name": "RBDSinfo.xlsx",
+      "size_bytes": 79203,
+      "download_url": "https://ndownloader.figshare.com/files/39452935",
+      "md5": "e3e68bbb13ab4bc1ea2caf69a1ef9c34"
+    },
+    {
+      "name": "RBDSinfo.txt",
+      "size_bytes": 142235,
+      "download_url": "https://ndownloader.figshare.com/files/39452932",
+      "md5": "1a5ab43a3d90e018d0df4c5732f2af51"
+    },
+    {
+      "name": "RBDS029processed.txt",
+      "size_bytes": 130359,
+      "download_url": "https://ndownloader.figshare.com/files/39452677",
+      "md5": "10c5b516226dd96262d3e5295409a16f"
+    },
+    {
+      "name": "RBDS030processed.txt",
+      "size_bytes": 131461,
+      "download_url": "https://ndownloader.figshare.com/files/39452713",
+      "md5": "8fb3a6d83b31c56916002ba98fb3f83f"
+    },
+    {
+      "name": "RBDS031processed.txt",
+      "size_bytes": 44000,
+      "download_url": "https://ndownloader.figshare.com/files/39452749",
+      "md5": "15762b728718093655e36b945f4e3fd9"
+    },
+    {
+      "name": "RBDS032processed.txt",
+      "size_bytes": 131240,
+      "download_url": "https://ndownloader.figshare.com/files/39452767",
+      "md5": "191b135470ebbcc7c102fd09da4e15a2"
+    },
+    {
+      "name": "RBDS033processed.txt",
+      "size_bytes": 43785,
+      "download_url": "https://ndownloader.figshare.com/files/39452803",
+      "md5": "62b5b1c8e12421102c74bb71e4ed518b"
+    },
+    {
+      "name": "RBDS034processed.txt",
+      "size_bytes": 43888,
+      "download_url": "https://ndownloader.figshare.com/files/39452821",
+      "md5": "4f964614d4d2397dd304112614acacf0"
+    },
+    {
+      "name": "RBDS035processed.txt",
+      "size_bytes": 43562,
+      "download_url": "https://ndownloader.figshare.com/files/39452839",
+      "md5": "d977ead8e1383f2b694e87db87337d79"
+    },
+    {
+      "name": "RBDS036processed.txt",
+      "size_bytes": 49984,
+      "download_url": "https://ndownloader.figshare.com/files/39452857",
+      "md5": "87292172022a27761f7d1b643899a62a"
+    },
+    {
+      "name": "RBDS037processed.txt",
+      "size_bytes": 50138,
+      "download_url": "https://ndownloader.figshare.com/files/39452878",
+      "md5": "d6c5394d5a8cac7df4e3965ae04efc85"
+    },
+    {
+      "name": "RBDS038processed.txt",
+      "size_bytes": 50168,
+      "download_url": "https://ndownloader.figshare.com/files/39452896",
+      "md5": "8c00ea889181001e7985291ae9e441a6"
+    },
+    {
+      "name": "RBDS039processed.txt",
+      "size_bytes": 49726,
+      "download_url": "https://ndownloader.figshare.com/files/39452914",
+      "md5": "11b6b9e6b7c1486d4b351dce9da4fc34"
+    }
+  ]
+}
