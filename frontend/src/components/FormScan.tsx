@@ -50,9 +50,9 @@ export function runningPose(phase: number): Pose & { kneeFlexNear: number; leanD
     if (side === 'n') kneeFlexNear = knee
     // Arms drive with the opposite leg.
     const arm = ph + Math.PI
-    // Elbow most bent in front, opening behind; hands pass low by the hips where the arms cross.
-    const upper = -0.08 + 0.8 * Math.sin(arm)
-    const elbow = 1.0 + 0.5 * Math.sin(arm) + 0.25 * Math.sin(arm) ** 2
+    // Compact distance-runner swing: hand to chest height in front, by the hip behind, close to the body.
+    const upper = -0.1 + 0.55 * Math.sin(arm)
+    const elbow = 1.3 + 0.35 * Math.sin(arm) + 0.1 * Math.sin(arm) ** 2
     pose[`elbow_${side}`] = add(pose.shoulder, dir(upper, 0.29))
     pose[`wrist_${side}`] = add(pose[`elbow_${side}`], dir(upper + elbow, 0.27))
   }
@@ -127,10 +127,9 @@ export function FormScan({ className }: { className?: string }) {
       ctx.beginPath(); ctx.moveTo(cx - R, ground); ctx.lineTo(cx + R, ground); ctx.stroke()
 
       // Ghost strides trailing behind.
-      for (let k = 4; k >= 1; k--) {
-        const ghost = runningPose(phase - k * 0.5)
-        drawBody(ctx, ghost, p => toScreen(p, -k * 0.26), 0.35 * (1 - k / 5))
-        drawSkeleton(ctx, ghost, p => toScreen(p, -k * 0.26), 0.15 * (1 - k / 5), 1)
+      for (let k = 3; k >= 1; k--) {
+        const ghost = runningPose(phase - k * 0.6)
+        drawBody(ctx, ghost, p => toScreen(p, -k * 0.3), 0.4 * (1 - k / 4), false)
       }
 
       const pose = runningPose(phase)
@@ -212,14 +211,17 @@ function arc(ctx: CanvasRenderingContext2D, centre: P, radius: number, from: num
 // front of the torso and the back of a downward limb (where the calf and hamstring sit).
 type Profile = [number, number][]
 const SHAPES: { from: string; to: string; a: Profile; b?: Profile }[] = [
-  { from: 'hip', to: 'knee', a: [[0, 0.092], [0.3, 0.104], [0.75, 0.07], [1, 0.052]], b: [[0, 0.088], [0.35, 0.098], [0.8, 0.064], [1, 0.05]] },
-  { from: 'knee', to: 'ankle', a: [[0, 0.05], [0.28, 0.072], [0.65, 0.038], [1, 0.027]], b: [[0, 0.048], [0.5, 0.036], [1, 0.027]] },
-  { from: 'heel', to: 'toe', a: [[0, 0.03], [0.35, 0.045], [1, 0.02]], b: [[0, 0.028], [0.5, 0.026], [1, 0.016]] },
-  { from: 'shoulder', to: 'elbow', a: [[0, 0.066], [0.4, 0.058], [1, 0.038]] },
-  { from: 'elbow', to: 'wrist', a: [[0, 0.04], [0.3, 0.046], [1, 0.025]] },
+  { from: 'hip', to: 'knee', a: [[0, 0.055], [0.22, 0.098], [0.4, 0.1], [0.75, 0.068], [1, 0.05]], b: [[0, 0.05], [0.25, 0.09], [0.4, 0.095], [0.8, 0.062], [1, 0.048]] },
+  { from: 'knee', to: 'ankle', a: [[0, 0.048], [0.28, 0.068], [0.65, 0.037], [1, 0.027]], b: [[0, 0.046], [0.5, 0.035], [1, 0.027]] },
+  // Shoe: deeper over the laces, a flat sole underneath.
+  { from: 'heel', to: 'toe', a: [[0, 0.04], [0.3, 0.055], [0.75, 0.04], [1, 0.022]], b: [[0, 0.026], [0.5, 0.024], [1, 0.016]] },
+  { from: 'shoulder', to: 'elbow', a: [[0, 0.06], [0.4, 0.054], [1, 0.036]] },
+  { from: 'elbow', to: 'wrist', a: [[0, 0.038], [0.3, 0.043], [1, 0.024]] },
 ]
-const TORSO_FRONT: Profile = [[0, 0.09], [0.3, 0.084], [0.62, 0.128], [0.85, 0.11], [1, 0.05]]
-const TORSO_BACK: Profile = [[0, 0.135], [0.18, 0.115], [0.5, 0.09], [0.8, 0.115], [1, 0.06]]
+// Side view of the trunk: glutes and upper back behind, chest in front, a flat abdomen.
+const TORSO_FRONT: Profile = [[0, 0.085], [0.3, 0.08], [0.6, 0.118], [0.82, 0.105], [1, 0.055]]
+const TORSO_BACK: Profile = [[0, 0.13], [0.15, 0.12], [0.45, 0.088], [0.78, 0.112], [1, 0.065]]
+const NECK: Profile = [[0, 0.055], [1, 0.048]]
 
 function sample(profile: Profile, t: number) {
   for (let i = 1; i < profile.length; i++) {
@@ -233,31 +235,73 @@ function sample(profile: Profile, t: number) {
   return profile[profile.length - 1][1]
 }
 
-/** Adds a tapered, muscle-profiled limb (in metres) to a path, projected to the screen. */
+/**
+ * Adds a muscle-profiled limb (in metres) to a path as one smooth closed outline,
+ * with rounded caps at both ends so neighbouring segments blend at the joints.
+ */
 function addLimb(path: Path2D, a: P, b: P, sideA: Profile, sideB: Profile, project: (p: P) => P) {
   const dx = b.x - a.x; const dy = b.y - a.y
   const length = Math.hypot(dx, dy) || 1
-  const nx = dy / length; const ny = -dx / length
-  const steps = 14
+  const ux = dx / length; const uy = dy / length
+  const nx = uy; const ny = -ux
+  const at = (t: number, side: number, w: number): P => project({ x: a.x + dx * t + side * nx * w, y: a.y + dy * t + side * ny * w })
+  const cap = (centre: P, radius: number, flip: number, k: number): P => {
+    const angle = (k / 8) * Math.PI
+    return project({
+      x: centre.x + flip * (nx * Math.cos(angle) + ux * Math.sin(angle)) * radius,
+      y: centre.y + flip * (ny * Math.cos(angle) + uy * Math.sin(angle)) * radius,
+    })
+  }
   const points: P[] = []
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps; const w = sample(sideA, t)
-    points.push(project({ x: a.x + dx * t + nx * w, y: a.y + dy * t + ny * w }))
-  }
-  for (let i = steps; i >= 0; i--) {
-    const t = i / steps; const w = sample(sideB, t)
-    points.push(project({ x: a.x + dx * t - nx * w, y: a.y + dy * t - ny * w }))
-  }
-  path.moveTo(points[0].x, points[0].y)
-  for (let i = 1; i < points.length; i++) {
-    const mid = { x: (points[i - 1].x + points[i].x) / 2, y: (points[i - 1].y + points[i].y) / 2 }
-    path.quadraticCurveTo(points[i - 1].x, points[i - 1].y, mid.x, mid.y)
+  const steps = 16
+  for (let i = 0; i <= steps; i++) { const t = i / steps; points.push(at(t, 1, sample(sideA, t))) }
+  // Rounded cap around b, back down side B, then a rounded cap around a.
+  const capB = (sample(sideA, 1) + sample(sideB, 1)) / 2
+  for (let k = 1; k < 8; k++) points.push(cap(b, capB, 1, k))
+  for (let i = steps; i >= 0; i--) { const t = i / steps; points.push(at(t, -1, sample(sideB, t))) }
+  const capA = (sample(sideA, 0) + sample(sideB, 0)) / 2
+  for (let k = 1; k < 8; k++) points.push(cap(a, capA, -1, k))
+  const mid = (p: P, q: P): P => ({ x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 })
+  const first = mid(points[points.length - 1], points[0])
+  path.moveTo(first.x, first.y)
+  for (let i = 0; i < points.length; i++) {
+    const next = mid(points[i], points[(i + 1) % points.length])
+    path.quadraticCurveTo(points[i].x, points[i].y, next.x, next.y)
   }
   path.closePath()
 }
 
-/** The athlete's body: translucent gold muscle contours around the skeleton. */
-function drawBody(ctx: CanvasRenderingContext2D, pose: Pose, project: (p: P) => P, alpha: number) {
+// Offscreen layers for silhouettes: overlapping shapes merge into one body with a
+// single outer rim, instead of a stack of outlined tubes.
+const layers = typeof document === 'undefined' ? null : { shape: document.createElement('canvas'), rim: document.createElement('canvas') }
+
+function silhouette(ctx: CanvasRenderingContext2D, path: Path2D, fill: CanvasGradient | string, fillAlpha: number, rimAlpha: number) {
+  if (!layers) return
+  const { width, height } = ctx.canvas
+  for (const layer of [layers.shape, layers.rim]) if (layer.width !== width || layer.height !== height) { layer.width = width; layer.height = height }
+  const transform = ctx.getTransform()
+  const shape = layers.shape.getContext('2d')!
+  shape.setTransform(1, 0, 0, 1, 0, 0); shape.clearRect(0, 0, width, height)
+  shape.setTransform(transform); shape.fillStyle = fill; shape.fill(path, 'nonzero')
+
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.globalAlpha = fillAlpha; ctx.drawImage(layers.shape, 0, 0)
+  if (rimAlpha > 0) {
+    const rim = layers.rim.getContext('2d')!
+    const px = Math.max(1, transform.a * 1.1)
+    rim.setTransform(1, 0, 0, 1, 0, 0); rim.globalCompositeOperation = 'source-over'; rim.clearRect(0, 0, width, height)
+    for (let k = 0; k < 8; k++) rim.drawImage(layers.shape, Math.cos(k * Math.PI / 4) * px, Math.sin(k * Math.PI / 4) * px)
+    rim.globalCompositeOperation = 'destination-out'; rim.drawImage(layers.shape, 0, 0)
+    rim.globalCompositeOperation = 'source-in'; rim.fillStyle = `rgb(${SOFT})`; rim.fillRect(0, 0, width, height)
+    rim.globalCompositeOperation = 'source-over'
+    ctx.globalAlpha = rimAlpha; ctx.drawImage(layers.rim, 0, 0)
+  }
+  ctx.restore()
+}
+
+/** The athlete's body as soft gold silhouettes: far limbs, then trunk and head, then near limbs. */
+function drawBody(ctx: CanvasRenderingContext2D, pose: Pose, project: (p: P) => P, alpha: number, rim = true) {
+  const unit = Math.abs(project({ x: 0, y: 0.1 }).y - project({ x: 0, y: 0 }).y) / 0.1
   const limbs = (side: 'n' | 'f') => {
     const path = new Path2D()
     for (const shape of SHAPES) {
@@ -265,31 +309,23 @@ function drawBody(ctx: CanvasRenderingContext2D, pose: Pose, project: (p: P) => 
       addLimb(path, from, pose[`${shape.to}_${side}`], shape.a, shape.b ?? shape.a, project)
     }
     const hand = project(pose[`wrist_${side}`])
-    const unit = Math.abs(project({ x: 0, y: 0.1 }).y - project({ x: 0, y: 0 }).y) / 0.1
-    path.moveTo(hand.x + unit * 0.032, hand.y); path.arc(hand.x, hand.y, unit * 0.032, 0, Math.PI * 2)
+    path.moveTo(hand.x + unit * 0.034, hand.y); path.ellipse(hand.x, hand.y, unit * 0.034, unit * 0.028, 0, 0, Math.PI * 2)
     return path
   }
   const core = new Path2D()
   addLimb(core, pose.pelvis, pose.neck, TORSO_FRONT, TORSO_BACK, project)
-  const headBase = { x: (pose.neck.x + pose.head.x) / 2, y: (pose.neck.y + pose.head.y) / 2 }
-  addLimb(core, pose.neck, headBase, [[0, 0.05], [1, 0.045]], [[0, 0.05], [1, 0.045]], project)
+  addLimb(core, pose.neck, { x: (pose.neck.x + pose.head.x) / 2, y: (pose.neck.y + pose.head.y) / 2 }, NECK, NECK, project)
   const head = project(pose.head)
-  const unit = Math.abs(project({ x: 0, y: 0.1 }).y - project({ x: 0, y: 0 }).y) / 0.1
-  core.moveTo(head.x + unit * 0.095, head.y)
-  core.ellipse(head.x, head.y, unit * 0.095, unit * 0.115, -0.15, 0, Math.PI * 2)
+  core.moveTo(head.x + unit * 0.098, head.y)
+  core.ellipse(head.x, head.y, unit * 0.098, unit * 0.118, -0.18, 0, Math.PI * 2)
 
-  const top = project({ x: 0, y: 1.9 }).y; const bottom = project({ x: 0, y: 0 }).y
-  const paint = (path: Path2D, fill: number, edge: number) => {
-    // Lit from above: a little brighter at the shoulders, fading toward the feet.
-    const shade = ctx.createLinearGradient(0, top, 0, bottom)
-    shade.addColorStop(0, `rgba(${SOFT},${fill * 1.25 * alpha})`); shade.addColorStop(1, `rgba(${GOLD},${fill * 0.8 * alpha})`)
-    ctx.fillStyle = shade; ctx.fill(path)
-    ctx.strokeStyle = `rgba(${SOFT},${edge * alpha})`; ctx.lineWidth = 1.2; ctx.stroke(path)
-  }
-  // Far limbs behind the torso, near limbs in front of it.
-  paint(limbs('f'), 0.13, 0.32)
-  paint(core, 0.26, 0.7)
-  paint(limbs('n'), 0.3, 0.8)
+  // Lit from above: brighter at the shoulders, fading toward the feet.
+  const top = project({ x: 0, y: 1.85 }).y; const bottom = project({ x: 0, y: 0 }).y
+  const shade = ctx.createLinearGradient(0, top, 0, bottom)
+  shade.addColorStop(0, `rgb(${SOFT})`); shade.addColorStop(1, `rgb(${GOLD})`)
+  silhouette(ctx, limbs('f'), shade, 0.12 * alpha, rim ? 0.3 * alpha : 0)
+  silhouette(ctx, core, shade, 0.24 * alpha, rim ? 0.75 * alpha : 0)
+  silhouette(ctx, limbs('n'), shade, 0.28 * alpha, rim ? 0.85 * alpha : 0)
 }
 
 /** Bones as gold lines, joints as glowing points; far-side limbs are fainter for depth. */
@@ -304,21 +340,20 @@ function drawSkeleton(ctx: CanvasRenderingContext2D, pose: Pose, project: (p: P)
     for (const [a, b] of BONES) {
       if (a === 'pelvis' || a === 'neck') continue
       const from = a === 'shoulder' ? pose.shoulder : pose[`${a}_${side}`]
-      line(from, pose[`${b}_${side}`], near ? 0.95 : 0.4, near ? 2.6 : 1.8)
+      line(from, pose[`${b}_${side}`], near ? 0.9 : 0.35, near ? 2.2 : 1.5)
     }
     for (const joint of JOINTS) {
       const p = project(joint === 'shoulder' ? pose.shoulder : pose[`${joint}_${side}`])
-      const r = near ? 3.4 : 2.4
+      const r = near ? 3.2 : 2.2
       const halo = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 4)
       halo.addColorStop(0, `rgba(${SOFT},${0.5 * alpha * (near ? 1 : 0.5)})`); halo.addColorStop(1, `rgba(${SOFT},0)`)
       ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(p.x, p.y, r * 4, 0, Math.PI * 2); ctx.fill()
       ctx.fillStyle = `rgba(255,248,232,${alpha * (near ? 1 : 0.55)})`; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill()
     }
   }
-  line(pose.pelvis, pose.neck, 1, 3)
-  line(pose.neck, pose.head, 0.9, 2.2)
+  // Spine and neck; the head itself is part of the body silhouette.
+  line(pose.pelvis, pose.neck, 0.9, 2.4)
+  line(pose.neck, pose.head, 0.8, 1.8)
   const head = project(pose.head)
-  const scale = Math.abs(project({ x: 0, y: 0.1 }).y - project({ x: 0, y: 0 }).y)
-  ctx.strokeStyle = `rgba(${GOLD},${0.95 * alpha})`; ctx.lineWidth = 2 * weight
-  ctx.beginPath(); ctx.arc(head.x, head.y, scale * 0.95, 0, Math.PI * 2); ctx.stroke()
+  ctx.fillStyle = `rgba(255,248,232,${alpha})`; ctx.beginPath(); ctx.arc(head.x, head.y, 3, 0, Math.PI * 2); ctx.fill()
 }
