@@ -22,7 +22,7 @@ const dir = (angle: number, length: number): P => ({ x: Math.sin(angle) * length
 const add = (a: P, b: P): P => ({ x: a.x + b.x, y: a.y + b.y })
 
 /** Side-view running pose in metres (x forward, y up), feet on the ground. */
-function runningPose(phase: number): Pose & { kneeFlexNear: number; leanDeg: number; stanceNear: boolean } {
+export function runningPose(phase: number): Pose & { kneeFlexNear: number; leanDeg: number; stanceNear: boolean } {
   const lean = 0.19 + 0.025 * Math.sin(2 * phase)
   const pose: Pose = {}
   pose.pelvis = { x: 0, y: 0 }
@@ -32,10 +32,16 @@ function runningPose(phase: number): Pose & { kneeFlexNear: number; leanDeg: num
   let kneeFlexNear = 0
   for (const [side, offset] of [['n', 0], ['f', Math.PI]] as const) {
     const ph = phase + offset
-    const hip = 0.34 + 0.68 * Math.sin(ph)
-    const knee = 0.22 + 1.85 * bump(ph, -0.75, 0.75) + 0.36 * bump(ph, 3.0, 0.5)
+    // Good distance form, tuned so the foot lands flat (midfoot) about 25 cm ahead of
+    // the hip with a near-vertical shin and soft knee: the thigh swings back before landing.
+    const hip = 0.15 + 0.6 * Math.sin(ph + 1.1 * Math.sin(ph))
+    const knee = 0.22 + 1.85 * bump(ph, -0.75, 0.75) + 0.36 * bump(ph, 3.0, 0.5) + 0.3 * bump(ph, 1.0, 0.45)
     const shin = hip - knee
-    const foot = shin + Math.PI / 2 - 0.08 - 0.6 * bump(ph, -1.9, 0.55)
+    // In the air the foot follows the shin; from landing through stance it is held flat
+    // (very slightly toes-down) so the midfoot, not the heel, meets the ground.
+    const swingFoot = shin + Math.PI / 2 - 0.08 - 0.6 * bump(ph, -1.9, 0.55)
+    const flat = bump(ph, 2.2, 0.8)
+    const foot = (1 - flat) * swingFoot + flat * (Math.PI / 2 - 0.06)
     pose[`hip_${side}`] = add(pose.pelvis, { x: 0, y: -0.04 })
     pose[`knee_${side}`] = add(pose[`hip_${side}`], dir(hip, 0.46))
     pose[`ankle_${side}`] = add(pose[`knee_${side}`], dir(shin, 0.45))
@@ -174,7 +180,8 @@ export function FormScan({ className }: { className?: string }) {
       readout(screen('ankle_n'), -1, R * 0.02, 'Foot strike', 'Midfoot')
       // The contact light pulses while the near foot is on the ground.
       if (pose.stanceNear) {
-        const contact = screen('heel_n')
+        const heel = screen('heel_n'); const toe = screen('toe_n')
+        const contact = { x: (heel.x + toe.x) / 2 }
         const pulse = ctx.createRadialGradient(contact.x, ground, 0, contact.x, ground, R * 0.12)
         pulse.addColorStop(0, `rgba(${SOFT},0.55)`); pulse.addColorStop(1, `rgba(${SOFT},0)`)
         ctx.fillStyle = pulse; ctx.beginPath(); ctx.ellipse(contact.x, ground, R * 0.12, R * 0.03, 0, 0, Math.PI * 2); ctx.fill()
