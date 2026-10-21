@@ -13,7 +13,7 @@ export function Landing({ onFormCheck, onNutrition, onCoach }: Props) {
       <div className="landing-shade" />
       <div className="landing-copy">
         <span className="eyebrow">AI running form lab</span>
-        <h1 className="landing-title">Run In A<br /><em>Right WAY</em></h1>
+        <h1 className="landing-title">Run the<br /><em>Right Way</em></h1>
         <p className="landing-sub">Film 15 seconds of your run. Get the one fix that matters.</p>
         <div className="row">
           <button className="btn btn-gold btn-lg" onClick={onFormCheck}><Footprints size={18} /> Check my form <ArrowRight size={17} /></button>
