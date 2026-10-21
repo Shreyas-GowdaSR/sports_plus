@@ -1,27 +1,25 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { retargetMixamoClip } from '../lib/retarget'
-import { LINES, collarToNeck, raceBib, relaxHands, shapeAthleteBuild, shoeZone, shortsZone, singletZone, smoothGarment, splitZones } from '../lib/athlete'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
+import { LINES, collarToNeck, relaxHands, shapeAthleteBuild, smoothGarment } from '../lib/athlete'
+import { applySprintPose } from '../lib/sprintPose'
 
 /**
- * A generic elite sprinter (the Ready Player Me avatar from the three.js examples,
- * reshaped into a tall, muscular athlete in a technical singlet, half tights,
- * spikes and a race bib) sprinting at quarter speed, drawn as a glowing low-poly figure: faceted glass skin, a fine
- * wire mesh on top, and bright nodes that ride the skinned vertices. The timing
- * comes from the Mixamo "Soldier" run cycle; the limbs are rebuilt to sprint form.
+ * A generic elite sprinter frozen in the drive phase, standing on a circular
+ * slab that turns a full 360°. The figure (the Ready Player Me avatar from the
+ * three.js examples, reshaped into a muscular sprinter) is drawn as glowing
+ * low-poly glass: faceted skin, a fine wire mesh, and bright nodes on its surface.
  */
 
 const MODEL_URL = '/models/human.glb'
-const MOTION_URL = '/models/Soldier.glb'
-const PLAYBACK = 0.25
-const SPRINT_CYCLE = 0.46 // seconds per stride cycle at full speed (about 4.3 steps a second)
-const TALL = 1.05
+const TURN_SECONDS = 24 // one full revolution
 const NODES = 520
+const SLAB_RADIUS = 0.95
+const SLAB_HEIGHT = 0.09
 
 function glowTexture(kind: 'dot' | 'star') {
   const canvas = document.createElement('canvas'); canvas.width = canvas.height = 128
@@ -38,6 +36,36 @@ function glowTexture(kind: 'dot' | 'star') {
     }
   }
   return new THREE.CanvasTexture(canvas)
+}
+
+/** Dark metal disc with a glowing rim, a gold inlay ring and tick marks that show the turn. */
+function buildSlab() {
+  const slab = new THREE.Group()
+  const body = new THREE.Mesh(
+    new THREE.CylinderGeometry(SLAB_RADIUS, SLAB_RADIUS * 1.03, SLAB_HEIGHT, 96),
+    new THREE.MeshStandardMaterial({ color: 0x0a1428, metalness: 0.85, roughness: 0.28, emissive: 0x050c1c }),
+  )
+  body.position.y = SLAB_HEIGHT / 2
+  slab.add(body)
+  const glow = (color: number, opacity: number) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false })
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(SLAB_RADIUS * 1.015, 0.008, 8, 160), glow(0x4fb8ff, 0.95))
+  rim.rotation.x = Math.PI / 2; rim.position.y = SLAB_HEIGHT
+  const base = new THREE.Mesh(new THREE.TorusGeometry(SLAB_RADIUS * 1.03, 0.006, 8, 160), glow(0x2a7cff, 0.6))
+  base.rotation.x = Math.PI / 2; base.position.y = 0.004
+  const inlay = new THREE.Mesh(new THREE.RingGeometry(SLAB_RADIUS * 0.8, SLAB_RADIUS * 0.81, 128), glow(0xe2b85e, 0.85))
+  inlay.rotation.x = -Math.PI / 2; inlay.position.y = SLAB_HEIGHT + 0.001
+  slab.add(rim, base, inlay)
+  // Tick marks around the top edge, longer every 45°, so the rotation reads clearly.
+  const ticks: number[] = []
+  for (let i = 0; i < 72; i++) {
+    const a = (i / 72) * Math.PI * 2
+    const inner = SLAB_RADIUS * (i % 9 === 0 ? 0.84 : 0.88)
+    const outer = SLAB_RADIUS * 0.95
+    ticks.push(Math.cos(a) * inner, SLAB_HEIGHT + 0.002, Math.sin(a) * inner, Math.cos(a) * outer, SLAB_HEIGHT + 0.002, Math.sin(a) * outer)
+  }
+  const tickGeometry = new THREE.BufferGeometry(); tickGeometry.setAttribute('position', new THREE.Float32BufferAttribute(ticks, 3))
+  slab.add(new THREE.LineSegments(tickGeometry, new THREE.LineBasicMaterial({ color: 0x7fd0ff, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false })))
+  return slab
 }
 
 export function RunnerScene({ className }: { className?: string }) {
@@ -66,51 +94,35 @@ export function RunnerScene({ className }: { className?: string }) {
 
     const dot = glowTexture('dot'); const star = glowTexture('star')
 
-    // Floor light streak, back halo and drifting dust
-    const pool = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 0.8), new THREE.MeshBasicMaterial({ map: dot, color: 0x2a8cff, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending }))
-    pool.rotation.x = -Math.PI / 2; pool.position.set(0, 0.005, 0); scene.add(pool)
+    // Pool of light under the slab, a halo behind it and slow dust.
+    const pool = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), new THREE.MeshBasicMaterial({ map: dot, color: 0x1f6fe0, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending }))
+    pool.rotation.x = -Math.PI / 2; pool.position.y = 0.002; scene.add(pool)
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: dot, color: 0x0d3b8a, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending }))
-    halo.scale.set(6, 6, 1); halo.position.set(-0.4, 1.3, -2.5); scene.add(halo)
-    const DUST = 600
+    halo.scale.set(6, 6, 1); halo.position.set(-0.3, 1.3, -2.6); scene.add(halo)
+    const DUST = 500
     const dustPositions = new Float32Array(DUST * 3)
-    for (let i = 0; i < DUST; i++) dustPositions.set([Math.random() * 16 - 8, Math.random() * 4, Math.random() * 10 - 6], i * 3)
+    for (let i = 0; i < DUST; i++) dustPositions.set([Math.random() * 14 - 7, Math.random() * 4, Math.random() * 10 - 6], i * 3)
     const dustGeometry = new THREE.BufferGeometry(); dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3))
     scene.add(new THREE.Points(dustGeometry, new THREE.PointsMaterial({ color: 0x5fa8ff, size: 0.03, map: dot, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending })))
 
-    // Glowing nodes that follow the skinned surface
-    const nodePositions = new Float32Array(NODES * 3)
-    const nodeGeometry = new THREE.BufferGeometry(); nodeGeometry.setAttribute('position', new THREE.BufferAttribute(nodePositions, 3).setUsage(THREE.DynamicDrawUsage))
-    const nodes = new THREE.Points(nodeGeometry, new THREE.PointsMaterial({ color: 0xdff6ff, size: 0.022, map: dot, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }))
-    nodes.frustumCulled = false
-    scene.add(nodes)
-    const glints = Array.from({ length: 14 }, () => {
-      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: star, color: 0xc4ecff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }))
-      sprite.scale.set(0, 0, 1); scene.add(sprite)
-      return { sprite, node: Math.floor(Math.random() * NODES), seed: Math.random() * 10 }
-    })
-    let samples: { mesh: THREE.SkinnedMesh; index: number }[] = []
+    // Everything on the turntable rotates together.
+    const turntable = new THREE.Group()
+    turntable.add(buildSlab())
+    scene.add(turntable)
 
-    // Front faces only and normal blending: additive double-sided skin piles up into a white blob.
-    const glass = new THREE.MeshStandardMaterial({ color: 0x3a8ee6, emissive: 0x0e3f86, emissiveIntensity: 0.75, metalness: 0.3, roughness: 0.28, flatShading: true, transparent: true, opacity: 0.55, depthWrite: true })
-    // Kit: matte technical fabric (no metal sheen), white singlet and shoes, deep navy shorts, gold binding.
-    const fabric = (color: number, emissive: number) => new THREE.MeshStandardMaterial({ color, emissive, emissiveIntensity: 0.35, metalness: 0, roughness: 0.92, transparent: true, opacity: 0.94, depthWrite: true, side: THREE.DoubleSide })
-    const singlet = fabric(0xdfe7f0, 0x1c2a3c)
-    const shorts = fabric(0x1a2c55, 0x0a1430)
-    const shoe = fabric(0xeef2f6, 0x1c2a3c)
-    const trim = new THREE.MeshStandardMaterial({ color: 0xe2b85e, emissive: 0x6a4a14, emissiveIntensity: 0.6, metalness: 0.2, roughness: 0.5, transparent: true, opacity: 0.96, depthWrite: true })
-    const wire = new THREE.MeshBasicMaterial({ color: 0x8fdcff, wireframe: true, transparent: true, opacity: 0.13, depthWrite: false, blending: THREE.AdditiveBlending })
+    const glass = new THREE.MeshStandardMaterial({ color: 0x3a8ee6, emissive: 0x0e3f86, emissiveIntensity: 0.75, metalness: 0.3, roughness: 0.28, flatShading: true, transparent: true, opacity: 0.6, depthWrite: true, side: THREE.DoubleSide })
+    const wire = new THREE.MeshBasicMaterial({ color: 0x8fdcff, wireframe: true, transparent: true, opacity: 0.14, depthWrite: false, blending: THREE.AdditiveBlending })
+    const nodeMaterial = new THREE.PointsMaterial({ color: 0xdff6ff, size: 0.024, map: dot, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })
+    const glints: { sprite: THREE.Sprite; seed: number }[] = []
 
-    let mixer: THREE.AnimationMixer | null = null
-    const loader = new GLTFLoader()
-    Promise.all([loader.loadAsync(MODEL_URL), loader.loadAsync(MOTION_URL)]).then(([human, motion]) => {
+    new GLTFLoader().loadAsync(MODEL_URL).then(human => {
       if (disposed) return
       const model = human.scene
       const skinned: THREE.SkinnedMesh[] = []
       model.traverse(object => {
-        // Eyes and teeth sit inside the head and only add clutter through the glass;
-        // the headwear is a hat, which does not belong on a runner.
+        // Hat, eyes and teeth are not part of the athlete's silhouette.
         if (/^(EyeLeft|EyeRight|Wolf3D_Teeth|Wolf3D_Headwear)$/.test(object.name)) { object.visible = false; return }
-        // Cut the long coat at the hips; the singlet tucks into the shorts.
+        // Cut the long coat at the waist; its tails follow the pelvis instead of the thighs.
         if (object.name === 'Wolf3D_Outfit_Top') {
           const mesh = object as THREE.SkinnedMesh
           const positions = mesh.geometry.getAttribute('position')
@@ -118,9 +130,7 @@ export function RunnerScene({ className }: { className?: string }) {
           const hips = mesh.skeleton.bones.findIndex(bone => bone.name === 'Hips')
           for (let i = 0; i < positions.count; i++) {
             if (positions.getY(i) >= LINES.coatHem) continue
-            // Tuck the flared coat skirt in to the waist.
             positions.setXYZ(i, positions.getX(i) * 0.8, LINES.coatHem, positions.getZ(i) * 0.75)
-            // Coat tails were skinned to the thighs; at the hem they must follow the pelvis, not flap with the legs.
             skinIndex.setXYZW(i, hips, 0, 0, 0); skinWeight.setXYZW(i, 1, 0, 0, 0)
           }
           positions.needsUpdate = true; skinIndex.needsUpdate = true; skinWeight.needsUpdate = true
@@ -130,36 +140,18 @@ export function RunnerScene({ className }: { className?: string }) {
       const byName = (name: string) => skinned.find(mesh => mesh.name === name)
       shapeAthleteBuild(skinned)
       const neck = model.getObjectByName('Neck') as THREE.Bone | undefined
-      const topMesh = byName('Wolf3D_Outfit_Top'); const bottomMesh = byName('Wolf3D_Outfit_Bottom'); const shoeMesh = byName('Wolf3D_Outfit_Footwear')
-      if (topMesh && neck) collarToNeck(topMesh, neck)
-      // Iron out lapels, pockets and belt loops so the old clothes read as smooth racing kit.
-      if (topMesh) smoothGarment(topMesh, p => p.y > LINES.coatHem + 0.01 && p.y < LINES.neckline - 0.03 && Math.abs(p.x) < LINES.vestEdge - 0.01)
-      if (bottomMesh) smoothGarment(bottomMesh, p => p.y > LINES.shortsHem + 0.03)
-      if (topMesh) splitZones(topMesh, singletZone)
-      if (bottomMesh) splitZones(bottomMesh, shortsZone)
-      if (shoeMesh) splitZones(shoeMesh, shoeZone)
+      const top = byName('Wolf3D_Outfit_Top'); const bottom = byName('Wolf3D_Outfit_Bottom')
+      if (top && neck) collarToNeck(top, neck)
+      // Iron the clothing details (lapels, pockets, belt loops) into smooth anatomy.
+      if (top) smoothGarment(top, p => p.y > LINES.coatHem + 0.01 && p.y < LINES.neckline - 0.03 && Math.abs(p.x) < 0.19)
+      if (bottom) smoothGarment(bottom, p => p.y > 0.3)
       for (const mesh of skinned) mesh.geometry.computeVertexNormals()
       relaxHands(model)
-      const top = topMesh
-      const chest = model.getObjectByName('Spine2') as THREE.Bone | undefined
-      if (top && chest) {
-        // Bib sits on the front of the vest, just below the chest line.
-        const position = top.geometry.getAttribute('position')
-        const front = new THREE.Vector3(0, 1.3, 0); const p = new THREE.Vector3()
-        for (let i = 0; i < position.count; i++) {
-          p.fromBufferAttribute(position, i)
-          if (Math.abs(p.x) < 0.06 && p.y > 1.24 && p.y < 1.36 && p.z > front.z) front.z = p.z
-        }
-        raceBib(chest, front.applyMatrix4(top.bindMatrix).add(new THREE.Vector3(0, 0, 0.012)))
-      }
-      const sourceRun = motion.animations.find(clip => /^run$/i.test(clip.name)) ?? motion.animations[0]
-      const run = retargetMixamoClip(motion.scene, sourceRun, model, { form: 'sprint', cycle: SPRINT_CYCLE })
-      model.rotation.y = Math.PI / 2 // face +x so he runs toward the right of the screen
-      model.scale.setScalar(TALL)
+      applySprintPose(model)
+
       for (const mesh of skinned) {
-        mesh.material = mesh === topMesh ? [singlet, glass, trim] : mesh === bottomMesh ? [shorts, glass, trim] : mesh === shoeMesh ? [shoe, glass, trim] : glass
+        mesh.material = glass
         mesh.frustumCulled = false
-        // A second skin over the same skeleton draws the wire mesh.
         const overlay = new THREE.SkinnedMesh(mesh.geometry, wire)
         overlay.bind(mesh.skeleton, mesh.bindMatrix)
         overlay.morphTargetInfluences = mesh.morphTargetInfluences
@@ -167,22 +159,46 @@ export function RunnerScene({ className }: { className?: string }) {
         overlay.frustumCulled = false
         mesh.parent?.add(overlay)
       }
-      // Spread the nodes across the meshes in proportion to their vertex counts.
+
+      // Stand the posed figure on the slab: lowest point on the top surface, body centred over the disc.
+      model.updateMatrixWorld(true)
+      const bounds = new THREE.Box3(); const v = new THREE.Vector3()
+      for (const mesh of skinned) {
+        const count = mesh.geometry.getAttribute('position').count
+        for (let i = 0; i < count; i += 3) bounds.expandByPoint(mesh.getVertexPosition(i, v).applyMatrix4(mesh.matrixWorld))
+      }
+      const centre = bounds.getCenter(new THREE.Vector3())
+      model.position.set(-centre.x, SLAB_HEIGHT - bounds.min.y, -centre.z)
+      model.updateMatrixWorld(true)
+      turntable.add(model)
+
+      // The figure is static, so its glowing nodes are placed once, in turntable space.
       const total = skinned.reduce((sum, mesh) => sum + mesh.geometry.getAttribute('position').count, 0)
-      samples = Array.from({ length: NODES }, () => {
+      const nodePositions = new Float32Array(NODES * 3)
+      turntable.updateMatrixWorld(true)
+      const toTurntable = turntable.matrixWorld.clone().invert()
+      for (let n = 0; n < NODES; n++) {
         let pick = Math.floor(Math.random() * total)
-        for (const mesh of skinned) {
-          const count = mesh.geometry.getAttribute('position').count
-          if (pick < count) return { mesh, index: pick }
+        let mesh = skinned[0]
+        for (const candidate of skinned) {
+          const count = candidate.geometry.getAttribute('position').count
+          if (pick < count) { mesh = candidate; break }
           pick -= count
         }
-        return { mesh: skinned[0], index: 0 }
-      })
-      scene.add(model)
-      mixer = new THREE.AnimationMixer(model)
-      mixer.clipAction(run).play()
-      mixer.timeScale = reduced ? PLAYBACK * 0.5 : PLAYBACK
-    }).catch(error => console.error('Runner model failed to load', error))
+        mesh.getVertexPosition(pick, v).applyMatrix4(mesh.matrixWorld).applyMatrix4(toTurntable)
+        nodePositions.set([v.x, v.y, v.z], n * 3)
+      }
+      const nodeGeometry = new THREE.BufferGeometry(); nodeGeometry.setAttribute('position', new THREE.BufferAttribute(nodePositions, 3))
+      const nodes = new THREE.Points(nodeGeometry, nodeMaterial); nodes.frustumCulled = false
+      turntable.add(nodes)
+      for (let g = 0; g < 14; g++) {
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: star, color: 0xc4ecff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }))
+        sprite.position.fromArray(nodePositions, Math.floor(Math.random() * NODES) * 3)
+        sprite.scale.set(0, 0, 1)
+        turntable.add(sprite)
+        glints.push({ sprite, seed: Math.random() * 10 })
+      }
+    }).catch(error => console.error('Athlete model failed to load', error))
 
     const composer = new EffectComposer(renderer)
     composer.addPass(new RenderPass(scene, camera))
@@ -194,7 +210,7 @@ export function RunnerScene({ className }: { className?: string }) {
       const width = host.clientWidth; const height = host.clientHeight
       renderer.setSize(width, height, false); composer.setSize(width, height); bloom.resolution.set(width, height)
       camera.aspect = width / height
-      // Wide: runner sits right of the headline. Narrow: runner rises above it.
+      // Wide: athlete sits right of the headline. Narrow: athlete rises above it.
       if (width > 900) camera.setViewOffset(width, height, -width * 0.2, 0, width, height)
       else camera.setViewOffset(width, height, 0, height * 0.2, width, height)
       camera.fov = width > 900 ? 30 : 38
@@ -207,7 +223,6 @@ export function RunnerScene({ className }: { className?: string }) {
     window.addEventListener('pointermove', onPointer)
 
     const target = new THREE.Vector3(0, 0.95, 0)
-    const vertex = new THREE.Vector3()
     const clock = new THREE.Clock()
     let time = 0
     let frame = 0
@@ -217,34 +232,22 @@ export function RunnerScene({ className }: { className?: string }) {
       if (document.hidden) return
       const dt = Math.min(clock.getDelta(), 0.05)
       time += dt
-      mixer?.update(dt)
-
-      if (samples.length) {
-        samples[0].mesh.updateMatrixWorld(true)
-        for (let i = 0; i < samples.length; i++) {
-          const { mesh, index } = samples[i]
-          mesh.getVertexPosition(index, vertex)
-          vertex.applyMatrix4(mesh.matrixWorld)
-          nodePositions[i * 3] = vertex.x; nodePositions[i * 3 + 1] = vertex.y; nodePositions[i * 3 + 2] = vertex.z
-        }
-        nodeGeometry.attributes.position.needsUpdate = true
-        for (const glint of glints) {
-          glint.sprite.position.fromArray(nodePositions, glint.node * 3)
-          const s = 0.04 + 0.14 * Math.max(0, Math.sin(time * 1.2 + glint.seed)) ** 3
-          glint.sprite.scale.set(s, s, 1)
-        }
+      turntable.rotation.y += (Math.PI * 2 / TURN_SECONDS) * dt * (reduced ? 0.3 : 1)
+      for (const glint of glints) {
+        const s = 0.04 + 0.14 * Math.max(0, Math.sin(time * 1.2 + glint.seed)) ** 3
+        glint.sprite.scale.set(s, s, 1)
       }
 
       pointer.x += (pointer.tx - pointer.x) * 0.04
       pointer.y += (pointer.ty - pointer.y) * 0.04
-      const orbit = 0.55 + (reduced ? 0 : 0.15 * Math.sin(time * 0.1)) + pointer.x * 0.4
-      const radius = host.clientWidth > 900 ? 4.9 : 7
-      camera.position.set(target.x + Math.sin(orbit) * radius, 1.05 - pointer.y * 0.5, Math.cos(orbit) * radius)
+      const orbit = 0.35 + pointer.x * 0.3
+      const radius = host.clientWidth > 900 ? 5.2 : 7.2
+      camera.position.set(target.x + Math.sin(orbit) * radius, 1.35 - pointer.y * 0.4, Math.cos(orbit) * radius)
       camera.lookAt(target)
 
       for (let i = 0; i < DUST; i++) {
-        dustPositions[i * 3] -= dt * (0.1 + (i % 7) * 0.02)
-        if (dustPositions[i * 3] < -8) dustPositions[i * 3] = 8
+        dustPositions[i * 3 + 1] += dt * (0.02 + (i % 5) * 0.01)
+        if (dustPositions[i * 3 + 1] > 4) dustPositions[i * 3 + 1] = 0
       }
       dustGeometry.attributes.position.needsUpdate = true
       composer.render()
@@ -256,7 +259,6 @@ export function RunnerScene({ className }: { className?: string }) {
       cancelAnimationFrame(frame)
       observer.disconnect()
       window.removeEventListener('pointermove', onPointer)
-      mixer?.stopAllAction()
       scene.traverse(object => {
         const item = object as THREE.Mesh
         item.geometry?.dispose()

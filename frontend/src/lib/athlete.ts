@@ -1,20 +1,16 @@
 import * as THREE from 'three'
 
 /**
- * Turns the everyday Ready Player Me avatar into a generic elite sprinter:
- * a muscular V-shaped build, a matte technical singlet, half-length sprint
- * tights, unbranded low-profile spikes and a race bib. The avatar has no skin under its clothes, so the
- * clothes themselves are reshaped into body, neck and kit.
+ * Turns the everyday Ready Player Me avatar into a generic elite sprinter's
+ * body: a muscular V-shaped build with smooth, seamless surfaces. The avatar has
+ * no skin under its clothes, so the clothes themselves are reshaped into body and neck.
  *
  * All heights are metres in the avatar's rest pose.
  */
 
 export const LINES = {
-  coatHem: 0.96,    // the jacket is cut here; the singlet tucks into the shorts
-  neckline: 1.44,   // singlet neckline; everything above becomes neck
-  vestEdge: 0.2,    // sideways distance where the shoulder ends and the arm begins
-  shortsHem: 0.68,  // half tights finish just above the knee
-  sole: 0.035,      // shoe sole height
+  coatHem: 0.96,    // the jacket is cut here, at the waist
+  neckline: 1.44,   // collar line; everything above becomes neck
 }
 
 // How far each bone's flesh is pulled toward (<1) or pushed from (>1) the bone line.
@@ -139,78 +135,10 @@ export function smoothGarment(mesh: THREE.Mesh, select: (p: THREE.Vector3) => bo
   position.needsUpdate = true
 }
 
-/** 0 = main kit colour, 1 = bare skin, 2 = trim / accent. */
-export type Zone = 0 | 1 | 2
-
-/** Re-orders triangles into material groups so one garment can carry kit, skin and trim. */
-export function splitZones(mesh: THREE.Mesh, classify: (centre: THREE.Vector3) => Zone) {
-  const geometry = mesh.geometry
-  const position = geometry.getAttribute('position')
-  const index = geometry.getIndex()
-  if (!index) return
-  const zones: number[][] = [[], [], []]
-  const centre = new THREE.Vector3(); const p = new THREE.Vector3()
-  for (let t = 0; t < index.count; t += 3) {
-    centre.set(0, 0, 0)
-    for (let k = 0; k < 3; k++) centre.add(p.fromBufferAttribute(position, index.getX(t + k)))
-    zones[classify(centre.divideScalar(3))].push(index.getX(t), index.getX(t + 1), index.getX(t + 2))
-  }
-  geometry.setIndex(zones.flat())
-  geometry.clearGroups()
-  let start = 0
-  zones.forEach((zone, material) => { geometry.addGroup(start, zone.length, material); start += zone.length })
-}
-
-/** Singlet: scoop neck and armholes cut to skin, with a thin gold binding on every edge. */
-export function singletZone(c: THREE.Vector3): Zone {
-  const ax = Math.abs(c.x)
-  const scoop = c.z > 0.02 ? 0.07 * Math.max(0, 1 - ax / 0.11) : 0
-  const neck = LINES.neckline - scoop
-  if (c.y > neck || ax > LINES.vestEdge) return 1
-  if (c.y > neck - 0.022 || ax > LINES.vestEdge - 0.022) return 2
-  return 0
-}
-
-/** Half tights: a single gold stripe down the outside of each leg. */
-export function shortsZone(c: THREE.Vector3): Zone {
-  if (c.y < LINES.shortsHem) return 1
-  const side = Math.abs(c.x)
-  return side > 0.15 && Math.abs(c.z) < 0.03 ? 2 : 0
-}
-
-/** Spike: light upper, gold plate. */
-export function shoeZone(c: THREE.Vector3): Zone {
-  return c.y < LINES.sole ? 2 : 0
-}
-
 /** Sprinter's hands: fingers drawn in so the hand reads as a firm, compact blade. */
 export function relaxHands(model: THREE.Object3D) {
   for (const side of ['Left', 'Right']) {
     for (const finger of ['Index', 'Middle', 'Ring', 'Pinky']) model.getObjectByName(`${side}Hand${finger}1`)?.scale.setScalar(0.55)
     model.getObjectByName(`${side}HandThumb1`)?.scale.setScalar(0.75)
   }
-}
-
-/** A race bib that rides on the chest bone. */
-export function raceBib(chest: THREE.Bone, front: THREE.Vector3) {
-  const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 192
-  const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = '#f2d48a'
-  ctx.beginPath(); ctx.roundRect(6, 6, 244, 180, 14); ctx.fill()
-  ctx.fillStyle = '#10131a'
-  ctx.font = '700 20px Manrope, sans-serif'; ctx.textAlign = 'center'
-  ctx.fillText('SPORTSAI+  100 M', 128, 42)
-  ctx.font = '800 104px Manrope, sans-serif'
-  ctx.fillText('01', 128, 154)
-  ctx.fillRect(40, 166, 176, 4)
-  const texture = new THREE.CanvasTexture(canvas)
-  texture.colorSpace = THREE.SRGBColorSpace
-  const bib = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.12), new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }))
-  // Drawn after the see-through body so the glass never hides it.
-  bib.renderOrder = 10
-  chest.updateMatrixWorld(true)
-  bib.position.copy(chest.worldToLocal(front.clone()))
-  bib.quaternion.copy(chest.getWorldQuaternion(new THREE.Quaternion()).invert())
-  chest.add(bib)
-  return bib
 }
