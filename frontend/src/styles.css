@@ -78,11 +78,6 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 .landing-inner { position: relative; width: 100%; max-width: 1240px; margin: 0 auto; padding: 96px 28px 56px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 32px; align-items: center; }
 .landing-copy { display: grid; gap: 24px; max-width: 540px; animation: rise .7s ease both; }
 .landing-scan { width: 100%; aspect-ratio: 1 / 1; max-height: 78vh; display: block; justify-self: center; }
-.proof { display: flex; gap: 0; margin: 6px 0 0; border-top: 1px solid var(--line); padding-top: 22px; }
-.proof div { flex: 1; padding-right: 18px; }
-.proof div + div { padding-left: 18px; border-left: 1px solid var(--line); }
-.proof dt { font-family: var(--serif); font-size: 34px; font-weight: 600; line-height: 1; color: var(--gold-soft); }
-.proof dd { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); }
 .landing-title { font-family: var(--serif); font-weight: 500; font-size: clamp(56px, 8vw, 112px); line-height: 0.92; letter-spacing: -0.02em; margin: 0; }
 .landing-title em { font-style: italic; background: linear-gradient(180deg, #f6e6bf, #c49a50); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .landing-sub { margin: 0; color: var(--steel); font-size: 17px; max-width: 420px; }
@@ -292,7 +287,6 @@ button.check:hover, .check.open { border-color: rgba(214,180,110,0.4); backgroun
   .landing-inner { grid-template-columns: 1fr; padding: 72px 16px 120px; gap: 8px; }
   .landing-scan { order: -1; max-width: 420px; }
   .landing-copy { gap: 18px; }
-  .proof dt { font-size: 28px; }
   .report-grid { grid-template-columns: 1fr; }
   .player canvas, .no-video { height: 260px; min-height: 260px; }
   .checks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
