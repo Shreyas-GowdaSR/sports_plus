@@ -77,9 +77,9 @@ flowchart LR
 
 The video never leaves the device. The offline GRF research model below is a separate path and is not called by the app.
 
-### 3D landing model
+### Landing visual
 
-`frontend/public/models/human.glb` is the Ready Player Me sample avatar from the [three.js examples](https://github.com/mrdoob/three.js/tree/r170/examples/models/gltf). At load time it is reshaped into a generic elite sprinter (`src/lib/athlete.ts`), frozen in a drive-phase sprint pose (`src/lib/sprintPose.ts`) and stood on a slowly rotating circular slab.
+The landing page draws a slow-motion runner as a pose skeleton inside a scanning lens (`src/components/FormScan.tsx`, plain 2D canvas). The trunk lean, knee angle and foot strike shown beside it are measured from that animated pose each frame.
 
 ### Python video backend
 
