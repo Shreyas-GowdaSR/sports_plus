@@ -2,14 +2,15 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { retargetMixamoClip } from '../lib/retarget'
+import { raceBib, slimToRunnerBuild, splitKit } from '../lib/athlete'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 
 /**
- * A man (the Ready Player Me avatar from the three.js examples) running at
- * quarter speed, drawn as a glowing low-poly figure: faceted glass skin, a fine
+ * An elite distance runner (the Ready Player Me avatar from the three.js examples,
+ * slimmed and dressed in a vest, shorts and race bib) running at quarter speed, drawn as a glowing low-poly figure: faceted glass skin, a fine
  * wire mesh on top, and bright nodes that ride the skinned vertices. His run is
  * the Mixamo "Soldier" run cycle, retargeted onto his skeleton.
  */
@@ -18,6 +19,9 @@ const MODEL_URL = '/models/human.glb'
 const MOTION_URL = '/models/Soldier.glb'
 const PLAYBACK = 0.25
 const COAT_HEM = 0.96 // metres in the avatar's rest pose, just below the belt
+const SHORTS_HEM = 0.79 // upper thigh, like racing shorts
+const NECKLINE = 1.44 // singlet neckline; the jacket collar above it is folded down
+const VEST_EDGE = 0.2 // sideways distance where the shoulder ends and the arm begins
 const NODES = 520
 
 function glowTexture(kind: 'dot' | 'star') {
@@ -89,6 +93,8 @@ export function RunnerScene({ className }: { className?: string }) {
 
     // Front faces only and normal blending: additive double-sided skin piles up into a white blob.
     const glass = new THREE.MeshStandardMaterial({ color: 0x3a8ee6, emissive: 0x0e3f86, emissiveIntensity: 0.75, metalness: 0.3, roughness: 0.28, flatShading: true, transparent: true, opacity: 0.55, depthWrite: true })
+    // The running kit (vest, shorts, shoes) is in the brand gold, so it reads clearly against the blue skin.
+    const kit = new THREE.MeshStandardMaterial({ color: 0xe0b866, emissive: 0x6a4a14, emissiveIntensity: 0.6, metalness: 0.45, roughness: 0.3, flatShading: true, transparent: true, opacity: 0.85, depthWrite: true })
     const wire = new THREE.MeshBasicMaterial({ color: 0x8fdcff, wireframe: true, transparent: true, opacity: 0.13, depthWrite: false, blending: THREE.AdditiveBlending })
 
     let mixer: THREE.AnimationMixer | null = null
@@ -104,16 +110,37 @@ export function RunnerScene({ className }: { className?: string }) {
         // Trim the long coat at the hips so it reads as a fitted top.
         if (object.name === 'Wolf3D_Outfit_Top') {
           const positions = (object as THREE.Mesh).geometry.getAttribute('position')
-          for (let i = 0; i < positions.count; i++) if (positions.getY(i) < COAT_HEM) positions.setY(i, COAT_HEM)
+          for (let i = 0; i < positions.count; i++) {
+            if (positions.getY(i) < COAT_HEM) positions.setY(i, COAT_HEM)
+            if (positions.getY(i) > NECKLINE && Math.abs(positions.getX(i)) < 0.16) positions.setY(i, NECKLINE)
+          }
           positions.needsUpdate = true
         }
         if ((object as THREE.SkinnedMesh).isSkinnedMesh) skinned.push(object as THREE.SkinnedMesh)
       })
+      slimToRunnerBuild(skinned)
+      for (const mesh of skinned) {
+        if (mesh.name === 'Wolf3D_Outfit_Top') splitKit(mesh, centre => Math.abs(centre.x) > VEST_EDGE)
+        if (mesh.name === 'Wolf3D_Outfit_Bottom') splitKit(mesh, centre => centre.y < SHORTS_HEM)
+      }
+      const top = skinned.find(mesh => mesh.name === 'Wolf3D_Outfit_Top')
+      const chest = model.getObjectByName('Spine2') as THREE.Bone | undefined
+      if (top && chest) {
+        // Bib sits on the front of the vest, just below the chest line.
+        const position = top.geometry.getAttribute('position')
+        const front = new THREE.Vector3(0, 1.3, 0); const p = new THREE.Vector3()
+        for (let i = 0; i < position.count; i++) {
+          p.fromBufferAttribute(position, i)
+          if (Math.abs(p.x) < 0.06 && p.y > 1.24 && p.y < 1.36 && p.z > front.z) front.z = p.z
+        }
+        raceBib(chest, front.applyMatrix4(top.bindMatrix).add(new THREE.Vector3(0, 0, 0.012)))
+      }
       const sourceRun = motion.animations.find(clip => /^run$/i.test(clip.name)) ?? motion.animations[0]
       const run = retargetMixamoClip(motion.scene, sourceRun, model)
       model.rotation.y = Math.PI / 2 // face +x so he runs toward the right of the screen
       for (const mesh of skinned) {
-        mesh.material = glass
+        const grouped = mesh.geometry.groups.length === 2
+        mesh.material = grouped ? [kit, glass] : mesh.name === 'Wolf3D_Outfit_Footwear' ? kit : glass
         mesh.frustumCulled = false
         // A second skin over the same skeleton draws the wire mesh.
         const overlay = new THREE.SkinnedMesh(mesh.geometry, wire)
@@ -193,7 +220,7 @@ export function RunnerScene({ className }: { className?: string }) {
 
       pointer.x += (pointer.tx - pointer.x) * 0.04
       pointer.y += (pointer.ty - pointer.y) * 0.04
-      const orbit = 0.3 + (reduced ? 0 : 0.18 * Math.sin(time * 0.1)) + pointer.x * 0.4
+      const orbit = 0.55 + (reduced ? 0 : 0.15 * Math.sin(time * 0.1)) + pointer.x * 0.4
       const radius = host.clientWidth > 900 ? 4.9 : 7
       camera.position.set(target.x + Math.sin(orbit) * radius, 1.05 - pointer.y * 0.5, Math.cos(orbit) * radius)
       camera.lookAt(target)

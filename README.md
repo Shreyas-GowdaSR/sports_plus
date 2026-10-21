@@ -80,7 +80,7 @@ The video never leaves the device. The offline GRF research model below is a sep
 ### 3D landing model
 
 `frontend/public/models/` holds two files from the [three.js examples](https://github.com/mrdoob/three.js/tree/r170/examples/models/gltf):
-- `human.glb` — the Ready Player Me sample avatar (the runner's body; hat hidden, coat trimmed at load time)
+- `human.glb` — the Ready Player Me sample avatar, reshaped at load time into an elite distance runner (`src/lib/athlete.ts`: slimmer build, gold singlet and racing shorts, race bib)
 - `Soldier.glb` — a Mixamo character used only for its "Run" animation, which `src/lib/retarget.ts` retargets onto the avatar at load time
 
 ### Python video backend
