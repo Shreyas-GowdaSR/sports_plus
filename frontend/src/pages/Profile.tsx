@@ -27,14 +27,8 @@ export function Profile({ profile, checks, onSave, onClearHistory }: Props) {
   }
 
   return (
-    <div className="page">
-      <header className="page-head">
-        <div>
-          <span className="eyebrow">Profile</span>
-          <h1 className="display">About <em>you.</em></h1>
-          <p className="lead">Fill this once. Every food amount, water amount and coach answer is worked out from it. Saved only on this device.</p>
-        </div>
-      </header>
+    <div className="page narrow">
+      <h1 className="page-title">Profile</h1>
 
       <form className="card" onSubmit={event => { event.preventDefault(); save() }}>
         <div className="profile-grid">
@@ -43,7 +37,7 @@ export function Profile({ profile, checks, onSave, onClearHistory }: Props) {
 
           <div className="field full">Gender<div className="seg">{GENDERS.map(item => <button type="button" key={item.id} className={draft.gender === item.id ? 'on' : ''} onClick={() => set('gender', item.id)}>{item.label}</button>)}</div></div>
 
-          <label className="field">Weight<div className="unit"><input type="number" min={30} max={150} value={draft.weightKg} onChange={num('weightKg')} /><span>kg</span></div><small>Most important. Food and water amounts depend on it.</small></label>
+          <label className="field">Weight<div className="unit"><input type="number" min={30} max={150} value={draft.weightKg} onChange={num('weightKg')} /><span>kg</span></div></label>
           <label className="field">Height<div className="unit"><input type="number" min={120} max={220} value={draft.heightCm} onChange={num('heightCm')} /><span>cm</span></div></label>
           <label className="field">Usual training time<input type="time" value={draft.trainingTime} onChange={event => set('trainingTime', event.target.value || '06:00')} style={{ colorScheme: 'dark' }} /></label>
 
@@ -54,11 +48,11 @@ export function Profile({ profile, checks, onSave, onClearHistory }: Props) {
           <div className="field full">Diet<div className="seg">{DIETS.map(item => <button type="button" key={item.id} className={draft.diet === item.id ? 'on' : ''} onClick={() => set('diet', item.id)}>{item.label}</button>)}</div></div>
           <div className="field full">Food you usually eat<div className="seg">{REGIONS.map(item => <button type="button" key={item.id} className={draft.region === item.id ? 'on' : ''} onClick={() => set('region', item.id)}>{item.label}</button>)}</div></div>
 
-          <label className="field full">Foods to avoid or allergies<input value={draft.avoid} placeholder="e.g. peanuts, milk, gluten" onChange={event => set('avoid', event.target.value.slice(0, 120))} /><small>We will never suggest these foods.</small></label>
+          <label className="field full">Foods to avoid or allergies<input value={draft.avoid} placeholder="e.g. peanuts, milk, gluten" onChange={event => set('avoid', event.target.value.slice(0, 120))} /></label>
         </div>
         <hr className="rule" />
         <div className="row" style={{ justifyContent: 'space-between' }}>
-          <span className="faint">{saved ? 'Saved. All plans are updated.' : 'Changes apply after you save.'}</span>
+          <span className="faint">{saved ? 'Saved' : 'Stored only on this device'}</span>
           <button className="btn btn-gold">{saved ? <Check size={16} /> : null}Save profile</button>
         </div>
       </form>

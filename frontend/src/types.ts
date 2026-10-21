@@ -82,12 +82,3 @@ export type Session = {
   weather: Weather
   startTime: string
 }
-
-export type PlannedDay = {
-  day: string
-  title: string
-  detail: string
-  kind: SessionKind
-  minutes: number
-  km: number
-}

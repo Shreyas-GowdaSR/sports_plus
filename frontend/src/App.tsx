@@ -1,34 +1,30 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Activity, Footprints, House, MessageCircle, TriangleAlert, Utensils, X } from 'lucide-react'
-import type { PlannedDay, RunningAnalysis, Session } from './types'
-import { useAthlete, firstName, type SavedCheck } from './lib/store'
-import { sessionFor, todayIndex, weekPlan } from './lib/week'
-import { buildFuelPlan } from './lib/fuel'
+import { Activity, Footprints, MessageCircle, TriangleAlert, User, Utensils, X } from 'lucide-react'
+import type { RunningAnalysis, Session } from './types'
+import { useAthlete, type SavedCheck } from './lib/store'
+import { buildFuelPlan, defaultSession } from './lib/fuel'
 import { askCoach, coachStatus, offlineAnswer, type ChatMessage } from './lib/coach'
 import { sampleVideo } from './lib/pose'
 import { longDistanceRunning } from './lib/running'
 import { createRunningReportPdf } from './lib/reportPdf'
-import { Home } from './pages/Home'
-import { Fuel } from './pages/Fuel'
+import { Landing } from './pages/Landing'
+import { Nutrition } from './pages/Nutrition'
 import { Coach } from './pages/Coach'
 import { FormUpload, Report, SAMPLE } from './pages/FormCheck'
 import { Profile } from './pages/Profile'
 
-type Screen = 'home' | 'form' | 'fuel' | 'coach' | 'profile'
+type Screen = 'landing' | 'form' | 'nutrition' | 'coach' | 'profile'
 
-const NAV: { id: Screen; label: string; icon: typeof House }[] = [
-  { id: 'home', label: 'Today', icon: House },
-  { id: 'fuel', label: 'Food & water', icon: Utensils },
+const TABS: { id: Screen; label: string; icon: typeof Footprints }[] = [
   { id: 'form', label: 'Form check', icon: Footprints },
-  { id: 'coach', label: 'Coach', icon: MessageCircle },
+  { id: 'nutrition', label: 'Nutrition', icon: Utensils },
+  { id: 'coach', label: 'AI Coach', icon: MessageCircle },
 ]
 
 export default function App() {
   const { profile, saveProfile, history, addCheck, clearHistory } = useAthlete()
-  const [screen, setScreen] = useState<Screen>(() => (profile.saved ? 'home' : 'profile'))
-  const week = useMemo(() => weekPlan(profile), [profile])
-  const today = todayIndex()
-  const [session, setSession] = useState<Session>(() => sessionFor(weekPlan(profile)[todayIndex()], profile))
+  const [screen, setScreen] = useState<Screen>('landing')
+  const [session, setSession] = useState<Session>(() => defaultSession(profile))
   const plan = useMemo(() => buildFuelPlan(profile, session), [profile, session])
 
   // Form check
@@ -47,8 +43,6 @@ export default function App() {
   useEffect(() => { void coachStatus().then(status => setLive(status.live)) }, [])
   useEffect(() => () => { if (videoUrl) URL.revokeObjectURL(videoUrl) }, [videoUrl])
   useEffect(() => { window.scrollTo({ top: 0 }) }, [screen, report])
-  // A new profile changes today's planned session (e.g. weekly distance); keep the Fuel page in step.
-  useEffect(() => { setSession(current => ({ ...sessionFor(week[today], profile), weather: current.weather })) }, [week, today, profile])
 
   const go = (next: Screen) => { if (next === 'form') setReport(null); setScreen(next) }
 
@@ -78,7 +72,7 @@ export default function App() {
     if (thinking) return
     const thread = [...messages, { role: 'user' as const, text }]
     setMessages(thread); setThinking(true); setScreen('coach')
-    const context = { profile, plan, week, latest: history[0] ?? null }
+    const context = { profile, plan, latest: history[0] ?? null }
     const controller = new AbortController(); abortRef.current = controller
     try {
       let started = false
@@ -95,31 +89,27 @@ export default function App() {
       /* aborted by "new chat" */
     } finally { setThinking(false); abortRef.current = null }
   }
+
   function clearChat() { abortRef.current?.abort(); setMessages([]); setThinking(false) }
 
-  function fuelFor(day?: PlannedDay) {
-    if (day) setSession(current => ({ ...sessionFor(day, profile), weather: current.weather }))
-    setScreen('fuel')
-  }
-
-  const initials = (profile.name.trim().split(/\s+/).map(part => part[0]).join('').slice(0, 2) || 'Me').toUpperCase()
+  const landing = screen === 'landing'
 
   return (
-    <div className="shell">
+    <div className={`shell${landing ? ' on-landing' : ''}`}>
       <header className="topbar">
         <div className="topbar-inner">
-          <button className="brand" onClick={() => go('home')} aria-label="SportsAI+ home">
-            <span className="brand-mark"><Activity size={17} /></span>
+          <button className="brand" onClick={() => go('landing')} aria-label="SportsAI+ home">
+            <span className="brand-mark"><Activity size={16} /></span>
             <span className="brand-name">SportsAI<b>+</b></span>
           </button>
-          <nav className="nav" aria-label="Main">
-            {NAV.map(({ id, label, icon: Icon }) => (
+          <nav className="tabs" aria-label="Main">
+            {TABS.map(({ id, label, icon: Icon }) => (
               <button key={id} className={screen === id ? 'active' : ''} onClick={() => go(id)} aria-current={screen === id ? 'page' : undefined}>
-                <Icon size={16} />{label}
+                <Icon size={16} /><span>{label}</span>
               </button>
             ))}
           </nav>
-          <button className={`avatar${screen === 'profile' ? ' active' : ''}`} onClick={() => go('profile')} aria-label={`Profile of ${firstName(profile)}`} title="Profile">{initials}</button>
+          <button className={`avatar${screen === 'profile' ? ' active' : ''}`} onClick={() => go('profile')} aria-label="Profile" title="Profile"><User size={16} /></button>
         </div>
       </header>
 
@@ -127,29 +117,24 @@ export default function App() {
 
       {busy && (
         <div className="overlay">
-          <div className="card dialog">
+          <div className="dialog">
             <div className="spinner" />
-            <span className="eyebrow" style={{ marginTop: 22 }}>Checking your form</span>
-            <h2 className="title">Reading your running…</h2>
-            <p className="muted">This happens on your device. Your video is not uploaded.</p>
+            <h2 className="subtitle" style={{ marginTop: 22 }}>Reading your run</h2>
             <div className="progress"><i style={{ width: `${progress}%` }} /></div>
             <span className="faint num">{progress}%</span>
           </div>
         </div>
       )}
 
-      <main style={{ flex: 1 }}>
-        {screen === 'home' && <Home profile={profile} week={week} today={today} plan={buildFuelPlan(profile, sessionFor(week[today], profile))} history={history}
-          onFuel={fuelFor} onFormCheck={() => go('form')} onOpenCheck={check => { setVideoUrl(null); setReport(check); setScreen('form') }} onAsk={send} onProfile={() => go('profile')} />}
-        {screen === 'fuel' && <Fuel profile={profile} session={session} plan={plan} onChange={setSession} onAsk={send} />}
+      <main>
+        {landing && <Landing onFormCheck={() => go('form')} onNutrition={() => go('nutrition')} onCoach={() => go('coach')} />}
         {screen === 'form' && (report
-          ? <Report analysis={report} videoUrl={report.id === 'sample' ? null : videoUrl} athlete={profile.name} onBack={() => setReport(null)} onDownload={downloadReport} onAsk={send} />
-          : <FormUpload busy={busy} onFile={analyse} onError={setError} onSample={() => setReport(SAMPLE)} />)}
-        {screen === 'coach' && <Coach profile={profile} plan={plan} latest={history[0] ?? null} messages={messages} busy={thinking} live={live} onSend={send} onClear={clearChat} onProfile={() => go('profile')} />}
-        {screen === 'profile' && <Profile profile={profile} checks={history.length} onSave={next => { saveProfile(next); if (!profile.saved) setScreen('home') }} onClearHistory={clearHistory} />}
+          ? <Report analysis={report} videoUrl={report.id === 'sample' ? null : videoUrl} onBack={() => setReport(null)} onDownload={downloadReport} onAsk={send} />
+          : <FormUpload busy={busy} history={history} onFile={analyse} onError={setError} onSample={() => setReport(SAMPLE)} onOpen={check => { setVideoUrl(null); setReport(check) }} />)}
+        {screen === 'nutrition' && <Nutrition profile={profile} session={session} plan={plan} onChange={setSession} onAsk={send} onProfile={() => go('profile')} />}
+        {screen === 'coach' && <Coach messages={messages} busy={thinking} live={live} onSend={send} onClear={clearChat} />}
+        {screen === 'profile' && <Profile profile={profile} checks={history.length} onSave={next => { saveProfile(next); setSession(current => ({ ...current, startTime: next.trainingTime })) }} onClearHistory={clearHistory} />}
       </main>
-
-      <footer className="footer">SportsAI+ is a coaching aid. It does not diagnose injury or replace a doctor, physio or dietitian.</footer>
     </div>
   )
 }

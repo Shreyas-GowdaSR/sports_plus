@@ -45,8 +45,8 @@ export function Capture({ onFile, onError, busy }: Props) {
     <div className={`upload${drag ? ' drag' : ''}`} onDragOver={event => { event.preventDefault(); setDrag(true) }} onDragLeave={() => setDrag(false)} onDrop={drop}>
       <div className="upload-icon"><Upload size={26} /></div>
       <div>
-        <h3 className="subtitle">Drop your running video here</h3>
-        <p className="muted" style={{ margin: '8px 0 0' }}>10–20 seconds, filmed from the side. It stays on your phone or laptop.</p>
+        <h3 className="subtitle">Drop your running video</h3>
+        <p className="faint" style={{ margin: '6px 0 0' }}>Never leaves your device</p>
       </div>
       <div className="row" style={{ justifyContent: 'center' }}>
         <button className="btn btn-gold" disabled={busy} onClick={() => inputRef.current?.click()}><Upload size={17} /> Choose video</button>

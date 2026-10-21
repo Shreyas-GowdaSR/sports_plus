@@ -1,5 +1,12 @@
-import type { AthleteProfile, Diet, Session } from '../types'
-import { SESSION_LABEL } from './week'
+import type { AthleteProfile, Diet, Session, SessionKind } from '../types'
+
+export const SESSION_LABEL: Record<SessionKind, string> = {
+  easy: 'Easy run', long: 'Long run', hard: 'Hard workout', race: 'Race day', strength: 'Strength', rest: 'Rest day',
+}
+
+export function defaultSession(profile: AthleteProfile): Session {
+  return { kind: 'easy', minutes: 45, weather: 'normal', startTime: profile.trainingTime || '06:00' }
+}
 
 /**
  * Turns sports-nutrition targets (ACSM / IOC consensus ranges) into Indian home

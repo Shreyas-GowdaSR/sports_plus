@@ -1,4 +1,4 @@
-import type { AthleteProfile, PlannedDay } from '../types'
+import type { AthleteProfile } from '../types'
 import type { FuelPlan, FuelStep } from './fuel'
 import { planAsText } from './fuel'
 import { analysisAsText, drillsFor, talkFor } from './plainTalk'
@@ -6,12 +6,12 @@ import type { SavedCheck } from './store'
 
 export type ChatMessage = { role: 'user' | 'assistant'; text: string; offline?: boolean }
 
-export type CoachContext = { profile: AthleteProfile; plan: FuelPlan; week: PlannedDay[]; latest: SavedCheck | null }
+export type CoachContext = { profile: AthleteProfile; plan: FuelPlan; latest: SavedCheck | null }
 
 const DIET_WORD = { veg: 'vegetarian (no egg, meat or fish)', egg: 'eggetarian (eggs ok, no meat or fish)', nonveg: 'non-vegetarian', vegan: 'vegan (no dairy, eggs, honey)' }
 const REGION_WORD = { south: 'South Indian food', north: 'North Indian food', any: 'any Indian food' }
 
-function contextPayload({ profile, plan, week, latest }: CoachContext) {
+function contextPayload({ profile, plan, latest }: CoachContext) {
   return {
     athlete: [
       `Name: ${profile.name || 'not given'} · ${profile.age} years · ${profile.gender}`,
@@ -21,7 +21,6 @@ function contextPayload({ profile, plan, week, latest }: CoachContext) {
       `Avoid / allergies: ${profile.avoid.trim() || 'none'}`,
     ].join('\n'),
     plan: planAsText(plan),
-    week: week.map(day => `${day.day}: ${day.title}${day.km ? ` · ${day.km} km` : ''}${day.minutes ? ` · ${day.minutes} min` : ''}`).join('\n'),
     form: latest ? analysisAsText(latest) : '',
   }
 }

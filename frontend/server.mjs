@@ -122,7 +122,6 @@ function contextBlock(context, question) {
     COACH_RULES,
     `\n=== ATHLETE ===\n${context.athlete || 'Not set'}`,
     `\n=== TODAY'S PLAN (already calculated for this athlete) ===\n${context.plan || 'Not set'}`,
-    `\n=== THIS WEEK ===\n${context.week || 'Not set'}`,
     `\n=== LATEST FORM CHECK ===\n${context.form || 'No form check yet. If they ask about form, suggest they upload a 10–20 second side-view running video in Form check.'}`,
     reference.length ? `\n=== REFERENCE NOTES (background only) ===\n${reference.map(item => `- ${item.text}`).join('\n')}` : '',
     values.length ? `\n=== FOOD VALUES (the athlete asked for numbers) ===\n${values.map(value => `- ${value}`).join('\n')}` : '',
@@ -139,7 +138,7 @@ function coachRequestFrom(payload) {
   const text = value => (typeof value === 'string' ? value.slice(0, 4000) : '')
   const context = payload.context && typeof payload.context === 'object' ? payload.context : {}
   const question = clean.filter(message => message.role === 'user').slice(-2).map(message => message.parts[0].text).join(' ')
-  return { contents: clean, system: contextBlock({ athlete: text(context.athlete), plan: text(context.plan), week: text(context.week), form: text(context.form) }, question) }
+  return { contents: clean, system: contextBlock({ athlete: text(context.athlete), plan: text(context.plan), form: text(context.form) }, question) }
 }
 
 // ── HTTP ─────────────────────────────────────────────────────

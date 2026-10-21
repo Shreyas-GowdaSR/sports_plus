@@ -1,18 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, Download, Footprints, Info, MessageCircle, Pause, Play, PlayCircle, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, Camera, Clock, Download, Footprints, MessageCircle, Pause, Play, PlayCircle, ScanLine, TriangleAlert } from 'lucide-react'
 import type { RunningAnalysis } from '../types'
 import { Capture } from '../components/Capture'
 import { PosePlayback } from '../components/PosePlayback'
 import { ScoreRing } from '../components/ui'
 import { drillsFor, footStrikeTalk, statusWord, talkFor, verdict } from '../lib/plainTalk'
 import type { SavedCheck } from '../lib/store'
-
-const TIPS = [
-  'Film from the side, with the phone still (use a wall or a friend).',
-  'Run past at your normal easy pace for 10–20 seconds.',
-  'Your whole body, head to shoes, should be in the video.',
-  'Good daylight, one runner only, plain background if possible.',
-]
 
 export const SAMPLE: SavedCheck = {
   id: 'sample', createdAt: new Date().toISOString(), sourceName: 'Sample easy run', duration: 14, confidence: 91, score: 76, readiness: 'ready', view: 'side', viewConfidence: 89,
@@ -28,46 +21,54 @@ export const SAMPLE: SavedCheck = {
   notes: [],
 }
 
-type UploadProps = { busy: boolean; onFile: (file: File) => void; onError: (message: string) => void; onSample: () => void }
+type UploadProps = { busy: boolean; history: SavedCheck[]; onFile: (file: File) => void; onError: (message: string) => void; onSample: () => void; onOpen: (check: SavedCheck) => void }
 
-export function FormUpload({ busy, onFile, onError, onSample }: UploadProps) {
+export function FormUpload({ busy, history, onFile, onError, onSample, onOpen }: UploadProps) {
   return (
-    <div className="page">
-      <header className="page-head">
-        <div>
-          <span className="eyebrow">Form check</span>
-          <h1 className="display">See how you run.<br /><em>Fix one thing at a time.</em></h1>
-          <p className="lead">Upload a short side-view video. The check runs on your device; your video is never uploaded.</p>
-        </div>
-      </header>
-      <div className="split">
-        <Capture busy={busy} onFile={onFile} onError={onError} />
-        <div className="card">
-          <span className="eyebrow">For a good result</span>
-          <ul className="tips" style={{ marginTop: 14 }}>{TIPS.map((tip, index) => <li key={tip}><span>{index + 1}</span>{tip}</li>)}</ul>
-          <hr className="rule" />
-          <button className="btn-link" onClick={onSample}><PlayCircle size={16} /> See a sample report first</button>
-        </div>
+    <div className="page narrow">
+      <h1 className="page-title">Form check</h1>
+      <Capture busy={busy} onFile={onFile} onError={onError} />
+      <div className="tip-chips">
+        <span><Camera size={15} /> Side view</span>
+        <span><Clock size={15} /> 10–20 sec</span>
+        <span><ScanLine size={15} /> Head to shoes in frame</span>
       </div>
+      <div className="row" style={{ justifyContent: 'center', marginTop: 28 }}>
+        <button className="btn-link" onClick={onSample}><PlayCircle size={16} /> View a sample report</button>
+      </div>
+      {history.length > 0 && (
+        <div className="past">
+          <span className="label">Past checks</span>
+          <div className="past-row">
+            {history.slice(0, 6).map(item => (
+              <button key={item.id} onClick={() => onOpen(item)}>
+                <strong className="num">{item.score}</strong>
+                <small>{new Date(item.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-type ReportProps = { analysis: SavedCheck | RunningAnalysis; videoUrl: string | null; athlete: string; onBack: () => void; onDownload: () => void; onAsk: (question: string) => void }
+type ReportProps = { analysis: SavedCheck | RunningAnalysis; videoUrl: string | null; onBack: () => void; onDownload: () => void; onAsk: (question: string) => void }
 
-export function Report({ analysis, videoUrl, athlete, onBack, onDownload, onAsk }: ReportProps) {
+export function Report({ analysis, videoUrl, onBack, onDownload, onAsk }: ReportProps) {
   const ordered = useMemo(() => [...analysis.metrics].sort((a, b) => a.score - b.score), [analysis.metrics])
-  const drills = useMemo(() => drillsFor(analysis.metrics), [analysis.metrics])
+  const drills = useMemo(() => drillsFor(analysis.metrics).slice(0, 3), [analysis.metrics])
+  const [open, setOpen] = useState<string | null>(null)
   const [speaking, setSpeaking] = useState(false)
   const voice = typeof window !== 'undefined' && 'speechSynthesis' in window
   useEffect(() => () => { if (voice) window.speechSynthesis.cancel() }, [voice])
 
   if (analysis.readiness === 'limited') return (
-    <div className="page" style={{ maxWidth: 720, textAlign: 'center' }}>
-      <TriangleAlert size={40} color="var(--watch)" />
-      <h1 className="display" style={{ fontSize: 48 }}>We couldn't see you clearly.</h1>
-      {analysis.notes.map(note => <p className="muted" key={note}>{note}</p>)}
-      <button className="btn btn-gold" style={{ marginTop: 16 }} onClick={onBack}>Try another video</button>
+    <div className="page narrow center">
+      <TriangleAlert size={36} color="var(--watch)" />
+      <h1 className="page-title">We couldn't see you clearly</h1>
+      <p className="muted">Try a steady side-view video with your whole body in the frame.</p>
+      <button className="btn btn-gold" onClick={onBack}>Try again</button>
     </div>
   )
 
@@ -80,87 +81,75 @@ export function Report({ analysis, videoUrl, athlete, onBack, onDownload, onAsk 
   const speak = () => {
     if (!voice) return
     if (speaking) { window.speechSynthesis.cancel(); setSpeaking(false); return }
-    const script = [`Your form score is ${analysis.score}. ${v.line}`, `Fix first: ${topTalk.name}. ${topTalk.issue} ${topTalk.fix}`, 'Work on one thing at a time, and stop if you feel pain.'].join(' ')
-    const utterance = new SpeechSynthesisUtterance(script); utterance.rate = 0.92; utterance.lang = 'en-IN'
+    const utterance = new SpeechSynthesisUtterance(`Your form score is ${analysis.score}. Fix first: ${topTalk.name}. ${topTalk.fix}`)
+    utterance.rate = 0.92; utterance.lang = 'en-IN'
     utterance.onend = () => setSpeaking(false); utterance.onerror = () => setSpeaking(false)
     window.speechSynthesis.cancel(); window.speechSynthesis.speak(utterance); setSpeaking(true)
   }
 
   return (
     <div className="page">
-      <button className="btn-link" onClick={onBack} style={{ marginBottom: 24 }}><ArrowLeft size={16} /> New form check</button>
+      <div className="report-top">
+        <button className="btn-link" onClick={onBack}><ArrowLeft size={16} /> New check</button>
+        <div className="row">
+          {voice && <button className="icon-btn" onClick={speak} title={speaking ? 'Stop' : 'Listen'} aria-label={speaking ? 'Stop' : 'Listen'}>{speaking ? <Pause size={16} /> : <Play size={16} />}</button>}
+          <button className="icon-btn" onClick={onDownload} title="Download PDF" aria-label="Download PDF"><Download size={16} /></button>
+          <button className="btn btn-gold btn-sm" onClick={() => onAsk(`My form check says I should fix my ${topTalk.name.toLowerCase()}. Give me a simple 2-week plan.`)}><MessageCircle size={15} /> Ask coach</button>
+        </div>
+      </div>
 
-      <section className="card gilded report-hero">
-        <ScoreRing score={analysis.score} size={150} />
-        <div>
-          <span className="eyebrow">{analysis.id === 'sample' ? 'Sample report' : `${athlete ? `${athlete} · ` : ''}${new Date(analysis.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}`}</span>
+      <section className="report-grid">
+        <div className="card score-card">
+          <ScoreRing score={analysis.score} size={168} />
           <div className="verdict-word">{v.word}</div>
-          <p className="muted" style={{ margin: 0, maxWidth: 520 }}>{v.line}</p>
+          {analysis.id === 'sample' && <span className="chip">Sample</span>}
         </div>
-        <div className="report-actions">
-          {voice && <button className="btn btn-ghost btn-sm" onClick={speak}>{speaking ? <Pause size={15} /> : <Play size={15} />}{speaking ? 'Stop' : 'Listen'}</button>}
-          <button className="btn btn-ghost btn-sm" onClick={onDownload}><Download size={15} /> PDF report</button>
-          <button className="btn btn-gold btn-sm" onClick={() => onAsk(`My form check says I should fix my ${topTalk.name.toLowerCase()}. Explain it simply and give me a 2-week practice plan.`)}><MessageCircle size={15} /> Ask coach</button>
-        </div>
-      </section>
-
-      <section className="split" style={{ marginTop: 20 }}>
         <div className="card player">
           {videoUrl && samples.length ? <PosePlayback videoUrl={videoUrl} samples={samples} /> : (
-            <div className="no-video">
-              <div><Footprints size={30} color="var(--gold)" /><p className="subtitle" style={{ marginTop: 12 }}>{analysis.id === 'sample' ? 'Upload your own video to see your body points here.' : 'Video is not saved, only the results.'}</p></div>
-            </div>
+            <div className="no-video"><Footprints size={30} color="var(--gold)" /></div>
           )}
         </div>
-        <div className="card fix-first">
-          <span className="eyebrow">Fix this first</span>
+        <div className="card gilded fix-first">
+          <span className="eyebrow">Fix first</span>
           <h3>{topTalk.name}</h3>
-          <div><span className="label">What we saw</span><p style={{ margin: 0 }}>{top.status === 'good' ? topTalk.good : topTalk.issue}</p></div>
-          <div><span className="label">What to do</span><p style={{ margin: 0 }}>{topTalk.fix}</p></div>
-          <div className="notice"><Info size={16} /><span>Practise this cue during 2–3 easy runs a week. Check your form again after 2 weeks.</span></div>
+          <p className="muted">{top.status === 'good' ? topTalk.good : topTalk.issue}</p>
+          <p className="fix-do">{topTalk.fix}</p>
         </div>
       </section>
 
-      <div className="row" style={{ justifyContent: 'space-between', margin: '48px 0 20px' }}>
-        <div><span className="eyebrow">All checks</span><h2 className="title">What the video showed</h2></div>
-      </div>
-      <section className="grid g3">
+      <section className="checks">
         {ordered.map(metric => {
           const talk = talkFor(metric, analysis.view)
+          const expanded = open === metric.id
           return (
-            <article className="card check" key={metric.id}>
-              <div className="check-top"><strong>{talk.name}</strong><b className="num">{metric.score}</b></div>
+            <button className={`check${expanded ? ' open' : ''}`} key={metric.id} onClick={() => setOpen(expanded ? null : metric.id)} aria-expanded={expanded}>
+              <div className="check-top"><span>{talk.name}</span><b className="num">{metric.score}</b></div>
               <div className="bar"><i className={metric.status} style={{ width: `${metric.score}%` }} /></div>
               <span className={`status ${metric.status}`}>{statusWord(metric.status)}</span>
-              <p>{metric.status === 'good' ? talk.good : talk.issue}</p>
-              <details><summary>Measured: {metric.value}</summary></details>
-            </article>
+              {expanded && <p>{metric.status === 'good' ? talk.good : talk.fix}</p>}
+            </button>
           )
         })}
-      </section>
-
-      <section className="grid g2" style={{ marginTop: 20 }}>
-        <div className="card">
-          <span className="eyebrow">Foot landing</span>
-          <h3 className="title">{strike.type}</h3>
-          <p>{strike.landing}</p>
-          <p className="faint" style={{ margin: 0 }}>{strike.note}</p>
-        </div>
-        <div className="card">
-          <span className="eyebrow">Drills · next 2 weeks</span>
-          <div style={{ marginTop: 18 }}>
-            {drills.map((drill, index) => (
-              <div className="drill" key={drill.name}>
-                <span className="drill-num">{String(index + 1).padStart(2, '0')}</span>
-                <div><h4>{drill.name} <span className="faint">· {drill.dose}</span></h4><p>{drill.how}</p></div>
-              </div>
-            ))}
-          </div>
-          <p className="faint" style={{ marginBottom: 0 }}>Do these 2–3 days a week, before an easy run. Stop if anything hurts.</p>
+        <div className="check static">
+          <div className="check-top"><span>Foot strike</span></div>
+          <strong className="strike">{strike.type}</strong>
+          <span className={`status ${analysis.footStrike.landing === 'ahead-of-body' ? 'watch' : 'good'}`}>{analysis.footStrike.landing === 'ahead-of-body' ? 'Lands ahead of body' : analysis.footStrike.landing === 'under-body' ? 'Lands under body' : 'Unclear'}</span>
         </div>
       </section>
 
-      <div className="notice" style={{ marginTop: 24 }}><Info size={16} /><span>This is a video-based check from body points, not a medical test. If you have pain, see a doctor or physio.</span></div>
+      <section className="card drills">
+        <span className="eyebrow">Drills</span>
+        <div className="drill-row">
+          {drills.map((drill, index) => (
+            <div className="drill" key={drill.name}>
+              <span className="drill-num">{String(index + 1).padStart(2, '0')}</span>
+              <h4>{drill.name}</h4>
+              <span className="chip gold">{drill.dose}</span>
+              <p>{drill.how}</p>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   )
 }
