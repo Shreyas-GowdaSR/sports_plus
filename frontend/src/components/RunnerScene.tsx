@@ -1,19 +1,23 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { retargetMixamoClip } from '../lib/retarget'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 
 /**
- * A rigged human (Mixamo "X Bot", from the three.js examples) playing its run
- * cycle at quarter speed, drawn as a glowing low-poly figure: faceted glass
- * skin, a fine wire mesh on top, and bright nodes that ride the skinned vertices.
+ * A man (the Ready Player Me avatar from the three.js examples) running at
+ * quarter speed, drawn as a glowing low-poly figure: faceted glass skin, a fine
+ * wire mesh on top, and bright nodes that ride the skinned vertices. His run is
+ * the Mixamo "Soldier" run cycle, retargeted onto his skeleton.
  */
 
-const MODEL_URL = '/models/Xbot.glb'
+const MODEL_URL = '/models/human.glb'
+const MOTION_URL = '/models/Soldier.glb'
 const PLAYBACK = 0.25
+const COAT_HEM = 0.96 // metres in the avatar's rest pose, just below the belt
 const NODES = 520
 
 function glowTexture(kind: 'dot' | 'star') {
@@ -88,23 +92,38 @@ export function RunnerScene({ className }: { className?: string }) {
     const wire = new THREE.MeshBasicMaterial({ color: 0x8fdcff, wireframe: true, transparent: true, opacity: 0.13, depthWrite: false, blending: THREE.AdditiveBlending })
 
     let mixer: THREE.AnimationMixer | null = null
-    new GLTFLoader().load(MODEL_URL, gltf => {
+    const loader = new GLTFLoader()
+    Promise.all([loader.loadAsync(MODEL_URL), loader.loadAsync(MOTION_URL)]).then(([human, motion]) => {
       if (disposed) return
-      const model = gltf.scene
-      model.rotation.y = Math.PI / 2 // face +x so the runner heads to the right of the screen
+      const model = human.scene
       const skinned: THREE.SkinnedMesh[] = []
-      model.traverse(object => { if ((object as THREE.SkinnedMesh).isSkinnedMesh) skinned.push(object as THREE.SkinnedMesh) })
+      model.traverse(object => {
+        // Eyes and teeth sit inside the head and only add clutter through the glass;
+        // the headwear is a hat, which does not belong on a runner.
+        if (/^(EyeLeft|EyeRight|Wolf3D_Teeth|Wolf3D_Headwear)$/.test(object.name)) { object.visible = false; return }
+        // Trim the long coat at the hips so it reads as a fitted top.
+        if (object.name === 'Wolf3D_Outfit_Top') {
+          const positions = (object as THREE.Mesh).geometry.getAttribute('position')
+          for (let i = 0; i < positions.count; i++) if (positions.getY(i) < COAT_HEM) positions.setY(i, COAT_HEM)
+          positions.needsUpdate = true
+        }
+        if ((object as THREE.SkinnedMesh).isSkinnedMesh) skinned.push(object as THREE.SkinnedMesh)
+      })
+      const sourceRun = motion.animations.find(clip => /^run$/i.test(clip.name)) ?? motion.animations[0]
+      const run = retargetMixamoClip(motion.scene, sourceRun, model)
+      model.rotation.y = Math.PI / 2 // face +x so he runs toward the right of the screen
       for (const mesh of skinned) {
         mesh.material = glass
         mesh.frustumCulled = false
         // A second skin over the same skeleton draws the wire mesh.
         const overlay = new THREE.SkinnedMesh(mesh.geometry, wire)
         overlay.bind(mesh.skeleton, mesh.bindMatrix)
+        overlay.morphTargetInfluences = mesh.morphTargetInfluences
         overlay.position.copy(mesh.position); overlay.quaternion.copy(mesh.quaternion); overlay.scale.copy(mesh.scale)
         overlay.frustumCulled = false
         mesh.parent?.add(overlay)
       }
-      // Spread the nodes across both meshes in proportion to their vertex counts.
+      // Spread the nodes across the meshes in proportion to their vertex counts.
       const total = skinned.reduce((sum, mesh) => sum + mesh.geometry.getAttribute('position').count, 0)
       samples = Array.from({ length: NODES }, () => {
         let pick = Math.floor(Math.random() * total)
@@ -117,10 +136,9 @@ export function RunnerScene({ className }: { className?: string }) {
       })
       scene.add(model)
       mixer = new THREE.AnimationMixer(model)
-      const run = gltf.animations.find(clip => clip.name === 'run') ?? gltf.animations[0]
-      if (run) mixer.clipAction(run).play()
+      mixer.clipAction(run).play()
       mixer.timeScale = reduced ? PLAYBACK * 0.5 : PLAYBACK
-    }, undefined, error => console.error('Runner model failed to load', error))
+    }).catch(error => console.error('Runner model failed to load', error))
 
     const composer = new EffectComposer(renderer)
     composer.addPass(new RenderPass(scene, camera))

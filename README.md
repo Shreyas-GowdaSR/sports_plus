@@ -77,6 +77,12 @@ flowchart LR
 
 The video never leaves the device. The offline GRF research model below is a separate path and is not called by the app.
 
+### 3D landing model
+
+`frontend/public/models/` holds two files from the [three.js examples](https://github.com/mrdoob/three.js/tree/r170/examples/models/gltf):
+- `human.glb` — the Ready Player Me sample avatar (the runner's body; hat hidden, coat trimmed at load time)
+- `Soldier.glb` — a Mixamo character used only for its "Run" animation, which `src/lib/retarget.ts` retargets onto the avatar at load time
+
 ### Python video backend
 
 The FastAPI backend in `backend/` is no longer called by the web app. Its components are experimental (see the table below) and duplicated the browser analysis, so they were removed from the interface.
