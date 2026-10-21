@@ -5,6 +5,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
+import { createCosmos } from './cosmos'
 
 /**
  * A rigged human (Mixamo "X Bot", from the three.js examples) playing its run
@@ -58,6 +59,7 @@ export function RunnerScene({ className }: { className?: string }) {
     const rim = new THREE.DirectionalLight(0x2f7bff, 3); rim.position.set(-3, 1.5, -2); scene.add(rim)
 
     const dot = glowTexture('dot'); const star = glowTexture('star')
+    const cosmos = createCosmos(scene, star, reduced)
 
     // Floor light streak, back halo and drifting dust
     const pool = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 0.8), new THREE.MeshBasicMaterial({ map: dot, color: 0x2a8cff, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending }))
@@ -116,6 +118,7 @@ export function RunnerScene({ className }: { className?: string }) {
         return { mesh: skinned[0], index: 0 }
       })
       scene.add(model)
+      cosmos.trackFeet(model)
       mixer = new THREE.AnimationMixer(model)
       const run = gltf.animations.find(clip => clip.name === 'run') ?? gltf.animations[0]
       if (run) mixer.clipAction(run).play()
@@ -156,6 +159,7 @@ export function RunnerScene({ className }: { className?: string }) {
       const dt = Math.min(clock.getDelta(), 0.05)
       time += dt
       mixer?.update(dt)
+      cosmos.update(dt, time)
 
       if (samples.length) {
         samples[0].mesh.updateMatrixWorld(true)
@@ -201,7 +205,7 @@ export function RunnerScene({ className }: { className?: string }) {
         const material = item.material as THREE.Material | THREE.Material[] | undefined
         if (Array.isArray(material)) material.forEach(m => m.dispose()); else material?.dispose()
       })
-      dot.dispose(); star.dispose()
+      dot.dispose(); star.dispose(); cosmos.dispose()
       composer.dispose(); renderer.dispose(); renderer.domElement.remove()
     }
   }, [])
