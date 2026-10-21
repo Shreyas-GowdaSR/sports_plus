@@ -79,7 +79,7 @@ The video never leaves the device. The offline GRF research model below is a sep
 
 ### Landing visual
 
-The landing page draws a slow-motion runner as a pose skeleton inside a scanning lens (`src/components/FormScan.tsx`, plain 2D canvas). The trunk lean, knee angle and foot strike shown beside it are measured from that animated pose each frame.
+The landing page shows `frontend/public/models/Xbot.glb` — the Mixamo "X Bot" character from the [three.js examples](https://github.com/mrdoob/three.js/tree/r170/examples/models/gltf) — playing its run animation at 0.25× speed, drawn as glowing blue glass with a wire mesh and light nodes (`src/components/RunnerScene.tsx`). Mixamo characters and animations are free to use in personal and commercial projects.
 
 ### Python video backend
 
