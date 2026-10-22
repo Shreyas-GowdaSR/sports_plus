@@ -3,7 +3,7 @@ import { Activity, Footprints, MessageCircle, TriangleAlert, User, Utensils, X }
 import type { RunningAnalysis, Session } from './types'
 import { useAthlete, type SavedCheck } from './lib/store'
 import { buildFuelPlan, defaultSession } from './lib/fuel'
-import { askCoach, coachStatus, offlineAnswer, type ChatMessage } from './lib/coach'
+import { askCoach, coachStatus, offlineAnswer, offlineNotice, type ChatMessage } from './lib/coach'
 import { sampleVideo } from './lib/pose'
 import { longDistanceRunning } from './lib/running'
 import { createRunningReportPdf } from './lib/reportPdf'
@@ -76,14 +76,14 @@ export default function App() {
     const controller = new AbortController(); abortRef.current = controller
     try {
       let started = false
-      const ok = await askCoach(thread, context, reply => {
+      const result = await askCoach(thread, context, reply => {
         if (!started) { started = true; setMessages(current => [...current, { role: 'assistant', text: reply }]) }
         else setMessages(current => [...current.slice(0, -1), { role: 'assistant', text: reply }])
       }, controller.signal)
-      if (!ok) {
+      if (!result.ok) {
         setLive(false)
         const answer = offlineAnswer(text, context)
-        setMessages(current => [...(started ? current.slice(0, -1) : current), { role: 'assistant', text: answer, offline: true }])
+        setMessages(current => [...(started ? current.slice(0, -1) : current), { role: 'assistant', text: answer, offline: true, notice: offlineNotice(result) }])
       } else setLive(true)
     } catch {
       /* aborted by "new chat" */

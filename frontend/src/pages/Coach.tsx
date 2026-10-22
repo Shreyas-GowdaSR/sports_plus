@@ -42,8 +42,8 @@ export function Coach({ messages, busy, live, onSend, onClear }: Props) {
             ? <div className="msg user" key={index}>{message.text}</div>
             : (
               <div className="msg assistant" key={index}>
+                {message.offline && <div className="msg-meta offline-notice">{message.notice ?? 'Offline answer from your plan'}</div>}
                 {message.text ? <Markdown text={message.text} /> : <span className="typing"><i /><i /><i /></span>}
-                {message.offline && <div className="msg-meta">Offline answer from your plan</div>}
               </div>
             ))}
           {busy && last?.role === 'user' && <div className="msg assistant"><span className="typing"><i /><i /><i /></span></div>}

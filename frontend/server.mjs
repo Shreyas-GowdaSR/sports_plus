@@ -92,12 +92,22 @@ HOW TO TALK
 - Avoid jargon. If you must use a term, explain it in brackets, e.g. "carbs (energy foods like rice, idli, banana)".
 - Talk directly to the athlete ("you"). Use their first name once in a while, not every message.
 - Use Indian home foods and Indian measures: katori, glass (250 ml), cup, plate, chapati, idli, handful, tablespoon. Water in ml or glasses.
-- Keep it short: usually 4–10 lines. Use "- " bullet points. Bold the time words like **2 hours before**, **During**, **After**, **Water**.
+- Keep it short: usually 5–12 lines. Use "- " bullet points. Bold the time words like **2 hours before**, **During**, **After**, **Water**.
 - No long introductions, no "Great question", no closing summary paragraphs.
+
+ANSWER WHAT WAS ASKED
+- Answer the athlete's actual question, whatever it is: a food, a recipe, a swap, a dish they like, eating out, festivals, fasting, budget, hostel food, cramps, sleep, recovery, training, motivation. Never reply with the full day plan unless they ask for it.
+- Every reply must be different and specific to the question. Do not repeat your previous answer.
+- If the question is outside sport and health, still give a short, helpful answer, then offer to help with their running or food.
+
+ALWAYS GIVE ALTERNATIVES
+- Whenever you suggest a food, drink or meal, add 2–3 alternatives they can swap in, each with its amount, all fitting their diet and avoid list. Example: "**Instead of a banana:** 3 dates, or 1 chikoo, or 2 slices of bread with jam".
+- When they say they dislike, cannot get, or cannot eat something, lead with the alternatives.
+- Prefer foods that are cheap and easy to find in India; mention one option for hostel or travel when it helps.
 
 WHAT TO GIVE
 - Always be specific: WHAT to eat or drink, HOW MUCH, and WHEN. Example: "**2 hours before:** 4 idlis with sambar + 1 banana".
-- The athlete's data and TODAY'S PLAN below are already calculated for this athlete. Use those amounts. Do not contradict them.
+- The athlete's data and TODAY'S PLAN below are already calculated for this athlete. Use those amounts when the question is about today's session. Do not contradict them.
 - If the athlete changes something (another time, a longer run, a hot day, a race), adjust the amounts using these rules:
   - Use the PLAN WEIGHT (BMI-adjusted) for food amounts and the actual weight for water.
   - Before: 1–2 g carbs per kg plan weight, 1–3 hours before. For runs before 8 am, a light snack 30–90 min before instead.
@@ -160,36 +170,91 @@ function readJson(request) {
 
 // Busy (503) or rate-limited (429) models are common on the free tier. Try the
 // configured model twice, then fall back to other Flash models before giving up.
-const FALLBACK_MODELS = [model, 'gemini-3.7-flash', 'gemini-flash-latest'].filter((name, index, all) => all.indexOf(name) === index)
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
+// ── Model pool ───────────────────────────────────────────────
+// The free tier allows about 20 requests a day *per model*, and Google retires
+// models over time. Work through every usable Flash model in order of quality:
+// a retired model (404) is dropped for good, and a model that hit its quota (429)
+// is parked until the reset time Google reports, so requests never wait on it.
+const PREFERRED = [
+  'gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-flash-latest',
+  'gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.1-flash-lite',
+]
+let pool = [model, ...PREFERRED].filter((name, index, all) => all.indexOf(name) === index)
+const retired = new Set()
+const parkedUntil = new Map()
+const noThinking = new Set()
+
+async function refreshPool() {
+  if (!gemini) return
+  try {
+    const available = new Set()
+    for await (const entry of await gemini.models.list()) {
+      if (entry.supportedActions?.includes('generateContent')) available.add(entry.name.replace(/^models\//, ''))
+    }
+    pool = pool.filter(name => available.has(name))
+    console.log(`coach: model pool ${pool.join(', ')}`)
+  } catch (error) {
+    console.warn(`coach: could not list models (${error?.status ?? error?.message}); using the default pool`)
+  }
+}
+refreshPool()
+
+/** Seconds until a quota resets, from Google's "retry in 1h38m5s" / retryDelay text. */
+function retrySeconds(error) {
+  const text = String(error?.message ?? '')
+  const match = text.match(/retry in ((?:\d+h)?(?:\d+m)?(?:[\d.]+s)?)/i)
+  if (match) {
+    const [, h = 0, m = 0, sec = 0] = match[1].match(/(?:(\d+)h)?(?:(\d+)m)?(?:([\d.]+)s)?/) ?? []
+    return Number(h) * 3600 + Number(m) * 60 + Number(sec)
+  }
+  const delay = text.match(/"retryDelay":\s*"(\d+)s"/)
+  return delay ? Number(delay[1]) : 60
+}
+
+class CoachUnavailable extends Error {
+  constructor(reason, retryAt) { super(reason); this.reason = reason; this.retryAt = retryAt }
+}
 
 async function openStream(contents, system) {
-  let lastError
-  for (const [index, name] of [FALLBACK_MODELS[0], ...FALLBACK_MODELS].entries()) {
-    try {
-      const stream = await gemini.models.generateContentStream({
-        model: name, contents,
-        config: { systemInstruction: system, temperature: 0.4, maxOutputTokens: 4096, thinkingConfig: { thinkingLevel: 'LOW' } },
-      })
-      return { stream, used: name }
-    } catch (error) {
-      lastError = error
-      const status = error?.status ?? 0
-      if (status && ![429, 500, 503, 504, 404].includes(status)) throw error
-      console.warn(`coach: ${name} unavailable (${status || 'network'}), trying next`)
-      if (index === 0) await sleep(800)
+  let sawQuota = false
+  for (const name of pool) {
+    if (retired.has(name) || (parkedUntil.get(name) ?? 0) > Date.now()) continue
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const config = { systemInstruction: system, temperature: 0.5, maxOutputTokens: 4096 }
+        if (!noThinking.has(name)) config.thinkingConfig = { thinkingLevel: 'LOW' }
+        const stream = await gemini.models.generateContentStream({ model: name, contents, config })
+        return { stream, used: name }
+      } catch (error) {
+        const status = error?.status ?? 0
+        if (status === 400 && !noThinking.has(name) && /thinking/i.test(String(error?.message))) { noThinking.add(name); continue }
+        if (status === 404) { retired.add(name); console.warn(`coach: ${name} is retired, removed from the pool`) }
+        else if (status === 429) {
+          sawQuota = true
+          const wait = retrySeconds(error)
+          parkedUntil.set(name, Date.now() + wait * 1000)
+          console.warn(`coach: ${name} hit its quota, parked for ${Math.round(wait / 60)} min`)
+        } else console.warn(`coach: ${name} failed (${status || 'network'}), trying the next model`)
+        break
+      }
     }
   }
-  throw lastError
+  const nextReset = Math.min(...[...parkedUntil.values()].filter(time => time > Date.now()))
+  throw new CoachUnavailable(sawQuota || parkedUntil.size ? 'quota' : 'unavailable', Number.isFinite(nextReset) ? new Date(nextReset).toISOString() : null)
 }
 
 async function streamCoach(request, response) {
-  if (!gemini) return send(response, 503, { error: 'GEMINI_API_KEY is not set on the server.' })
+  if (!gemini) return send(response, 503, { error: 'GEMINI_API_KEY is not set on the server.', reason: 'no-key' })
   const { contents, system } = coachRequestFrom(await readJson(request))
-  const { stream, used } = await openStream(contents, system)
-  response.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Coach-Model': used })
+  let opened
+  try { opened = await openStream(contents, system) }
+  catch (error) {
+    if (error instanceof CoachUnavailable) return send(response, 503, { error: 'All AI models are busy or out of free quota.', reason: error.reason, retryAt: error.retryAt })
+    throw error
+  }
+  response.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Coach-Model': opened.used })
   let wrote = false
-  for await (const chunk of stream) {
+  for await (const chunk of opened.stream) {
     const text = chunk.text
     if (text) { response.write(text); wrote = true }
   }
@@ -211,7 +276,10 @@ function serveStatic(response, pathname) {
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`)
   try {
-    if (request.method === 'GET' && url.pathname === '/api/coach/status') return send(response, 200, { live: Boolean(gemini), model: gemini ? model : null })
+    if (request.method === 'GET' && url.pathname === '/api/coach/status') {
+      const ready = pool.filter(name => !retired.has(name) && (parkedUntil.get(name) ?? 0) <= Date.now())
+      return send(response, 200, { live: Boolean(gemini) && ready.length > 0, model: ready[0] ?? null, models: ready.length })
+    }
     if (request.method === 'POST' && url.pathname === '/api/coach') return await streamCoach(request, response)
     if (url.pathname.startsWith('/api/')) return send(response, 404, { error: 'Unknown API route' })
     return serveStatic(response, url.pathname)
@@ -222,4 +290,4 @@ const server = createServer(async (request, response) => {
   }
 })
 
-server.listen(port, '127.0.0.1', () => console.log(`SportsAI+ server on http://127.0.0.1:${port} · coach ${gemini ? `live (${model})` : 'offline (no GEMINI_API_KEY)'} · ${passages.length} reference passages`))
+server.listen(port, '127.0.0.1', () => console.log(`SportsAI+ server on http://127.0.0.1:${port} · coach ${gemini ? 'live' : 'offline (no GEMINI_API_KEY)'} · ${passages.length} reference passages`))
