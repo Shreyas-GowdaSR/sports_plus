@@ -260,6 +260,12 @@ button.check:hover, .check.open { border-color: rgba(214,180,110,0.4); backgroun
 .chat-input:focus-within { border-color: rgba(214,180,110,0.6); }
 .chat-input textarea { flex: 1; resize: none; border: 0; background: none; outline: none; font-size: 15px; padding: 9px 0; max-height: 140px; }
 .send { width: 40px; height: 40px; border-radius: 50%; border: 0; display: grid; place-items: center; color: #17130a; background: linear-gradient(180deg, var(--gold-soft), var(--gold)); }
+.mic { width: 40px; height: 40px; flex: 0 0 auto; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line-strong); background: var(--panel); color: var(--steel); transition: color .2s, border-color .2s, background .2s; }
+.mic:hover:not(:disabled) { color: var(--gold-soft); border-color: rgba(214,180,110,0.5); }
+.mic.on { color: #fff; border-color: transparent; background: var(--focus); animation: mic-pulse 1.4s ease-out infinite; }
+@keyframes mic-pulse { 0% { box-shadow: 0 0 0 0 rgba(229,118,94,0.55); } 100% { box-shadow: 0 0 0 14px rgba(229,118,94,0); } }
+.chat-input.listening { border-color: rgba(229,118,94,0.6); }
+.voice-error { margin: 0 14px 8px; font-size: 12.5px; color: var(--watch); }
 
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 1100px) {

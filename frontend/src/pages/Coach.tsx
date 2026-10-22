@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowUp, RotateCcw, Sparkles } from 'lucide-react'
+import { ArrowUp, Mic, RotateCcw, Sparkles, Square } from 'lucide-react'
 import type { ChatMessage } from '../lib/coach'
 import { Markdown } from '../components/ui'
+import { useVoiceInput } from '../lib/voice'
 
 type Props = { messages: ChatMessage[]; busy: boolean; live: boolean; onSend: (text: string) => void; onClear: () => void }
 
@@ -19,7 +20,9 @@ export function Coach({ messages, busy, live, onSend, onClear }: Props) {
 
   useEffect(() => { logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: 'smooth' }) }, [messages, busy])
 
-  const submit = () => { const value = text.trim(); if (!value || busy) return; setText(''); onSend(value) }
+  const voice = useVoiceInput(setText)
+
+  const submit = () => { const value = text.trim(); if (!value || busy) return; voice.stop(); setText(''); onSend(value) }
 
   return (
     <div className="page narrow coach-page">
@@ -48,10 +51,19 @@ export function Coach({ messages, busy, live, onSend, onClear }: Props) {
             ))}
           {busy && last?.role === 'user' && <div className="msg assistant"><span className="typing"><i /><i /><i /></span></div>}
         </div>
-        <form className="chat-input" onSubmit={event => { event.preventDefault(); submit() }}>
-          <textarea rows={1} value={text} placeholder="Ask about food, water, training or form…" aria-label="Your question"
-            onChange={event => setText(event.target.value)}
+        {voice.error && <p className="voice-error" role="alert">{voice.error}</p>}
+        <form className={`chat-input${voice.listening ? ' listening' : ''}`} onSubmit={event => { event.preventDefault(); submit() }}>
+          <textarea rows={1} value={text} placeholder={voice.listening ? 'Listening… speak now' : 'Ask about food, water, training or form…'} aria-label="Your question"
+            onChange={event => { setText(event.target.value); if (voice.error) voice.clearError() }}
             onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); submit() } }} />
+          {voice.supported && (
+            <button type="button" className={`mic${voice.listening ? ' on' : ''}`} disabled={busy}
+              onClick={() => (voice.listening ? voice.stop() : voice.start(text))}
+              aria-label={voice.listening ? 'Stop listening' : 'Speak your question'} aria-pressed={voice.listening}
+              title={voice.listening ? 'Stop listening' : 'Speak your question (uses your browser speech service)'}>
+              {voice.listening ? <Square size={14} fill="currentColor" /> : <Mic size={18} />}
+            </button>
+          )}
           <button className="send" disabled={!text.trim() || busy} aria-label="Send"><ArrowUp size={18} /></button>
         </form>
       </section>
