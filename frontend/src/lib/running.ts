@@ -11,6 +11,12 @@ const CONTACT_DELAY_MS = 30  // initial contact follows the ankle's furthest-for
 const SAME_FOOT_GAP_S = 0.35 // one foot cannot land twice within this time
 const REARFOOT_DEG = 6       // foot angle at contact (+ = toe higher than heel)
 const FOREFOOT_DEG = 5
+const LANDING_TOL = 0.1      // foot within this many torso lengths of the stride's lowest point = landed
+const LANDING_SEARCH_S = 0.25
+// Landing distance (75th percentile, torso lengths ahead of the hips) of development runners
+// at the same step rate: faster running means more steps per minute and a foot that lands
+// further ahead, so a single fixed limit would flag good fast runners.
+const LANDING_NORM = { base: 0.156, perStep: 0.00137, spread: 0.109 }
 const SIDE_SPREAD = 0.25     // camera view from shoulder + hip width relative to torso length
 const FRONT_SPREAD = 0.6
 
@@ -152,17 +158,33 @@ export function findContacts(track: Track, direction: number): Contact[] {
       }
       chosen.push(i); last = i
     }
+    // Image y grows downward, so the foot's lowest point is the larger of heel and toe y.
+    const footLow = points.map((frame) => Math.max(frame[heel].y, frame[toe].y))
     chosen.forEach((peak) => {
       const j = Math.min(points.length - 1, Math.max(0, peak + delay))
       const frame = points[j]
       const footAngle = Math.atan2(frame[heel].y - frame[toe].y, Math.abs(frame[toe].x - frame[heel].x) + 1e-9) * 180 / Math.PI
       const type = footAngle > REARFOOT_DEG ? 'rearfoot' : footAngle < FOREFOOT_DEG ? 'forefoot' : 'midfoot'
-      const hip = meanPoint(frame[L.leftHip], frame[L.rightHip])
+      // Landing distance is read when the foot actually reaches this stride's ground level,
+      // not at a fixed delay: fast runners pull the foot back ("pawback") for longer before it lands.
+      const end = Math.min(points.length - 1, peak + Math.round(LANDING_SEARCH_S * fps))
+      const ground = Math.max(...footLow.slice(peak, end + 1))
+      let land = peak
+      while (land < end && (ground - footLow[land]) / torsoLength(points[land]) > LANDING_TOL) land += 1
+      const hip = meanPoint(points[land][L.leftHip], points[land][L.rightHip])
       contacts.push({ side, type, angle: footAngle, timestamp: times[peak] + CONTACT_DELAY_MS, visibility: avg([visibility[j][ankle], visibility[j][heel], visibility[j][toe]]),
-        advance: ((frame[ankle].x - hip.x) * direction) / torsoLength(frame) })
+        advance: ((points[land][ankle].x - hip.x) * direction) / torsoLength(points[land]) })
     })
   })
   return contacts.sort((a, b) => a.timestamp - b.timestamp)
+}
+
+/** Expected landing distance for this runner's step rate, and the limits built on it. */
+function landingNorm(contacts: Contact[]) {
+  const span = contacts.length > 1 ? (contacts[contacts.length - 1].timestamp - contacts[0].timestamp) / 1000 : 0
+  const stepsPerMinute = span > 0 ? clamp(60 * (contacts.length - 1) / span, 140, 210) : 170
+  const expected = LANDING_NORM.base + LANDING_NORM.perStep * stepsPerMinute
+  return { expected, aheadFrom: expected + 1.5 * LANDING_NORM.spread, penaltyFrom: expected + 0.5 * LANDING_NORM.spread }
 }
 
 function contactScreen(track: Track) {
@@ -176,8 +198,9 @@ function contactScreen(track: Track) {
   if (confidence < 60) return { contacts, assessment: { classification: 'inconclusive' as const, confidence, contacts: contacts.length, message: 'Contact frames were mixed or unclear, so the app will not guess a foot-strike pattern.', landing: 'inconclusive' as const, landingConfidence: 0 } }
   const advances = contacts.map((contact) => contact.advance).filter(Number.isFinite)
   if (advances.length < 6) return { contacts, assessment: { classification, confidence, contacts: contacts.length, message: `Most clear contact frames look ${label}. This is descriptive, not an injury-risk verdict.`, landing: 'inconclusive' as const, landingConfidence: 0 } }
-  const aheadFraction = advances.filter((value) => value > 0.38).length / advances.length
-  const landing = aheadFraction >= 0.38 ? 'ahead-of-body' as const : 'under-body' as const
+  const { aheadFrom } = landingNorm(contacts)
+  const aheadFraction = advances.filter((value) => value > aheadFrom).length / advances.length
+  const landing = percentile(advances, 0.75) > aheadFrom ? 'ahead-of-body' as const : 'under-body' as const
   const landingConfidence = Math.round(Math.max(aheadFraction, 1 - aheadFraction) * avg(contacts.map((contact) => contact.visibility)) * 100)
   const correction = landing === 'ahead-of-body' ? 'On the next easy strides, let the foot meet the ground closer beneath your hips. Keep your stride relaxed; do not force short, choppy steps.' : 'Your screened contacts land reasonably close to your body in this view. Keep the landing quiet and relaxed.'
   return { contacts, assessment: { classification, confidence, contacts: contacts.length, message: `Most clear contact frames look ${label}. This is descriptive, not an injury-risk verdict.`, landing, landingConfidence, correction } }
@@ -261,7 +284,8 @@ function makeAnalysis(samples: PoseSample[], sourceName: string, duration: numbe
   const strideAsymmetry = Math.abs((percentile(ankleYLeft, 0.9) - percentile(ankleYLeft, 0.1)) - (percentile(ankleYRight, 0.9) - percentile(ankleYRight, 0.1)))
   const symmetryScore = clamp(100 - Math.max(0, strideAsymmetry - 0.14) * 160)
   const advances = contact.contacts.map((item) => item.advance).filter(Number.isFinite)
-  const forwardPlacement = percentile(advances, 0.75); const footScore = advances.length >= 6 ? clamp(100 - Math.max(0, forwardPlacement - 0.30) * 155) : 70
+  const forwardPlacement = percentile(advances, 0.75); const { penaltyFrom } = landingNorm(contact.contacts)
+  const footScore = advances.length >= 6 ? clamp(100 - Math.max(0, forwardPlacement - penaltyFrom) * 155) : 70
 
   const metrics = [
     metric('posture', 'Trunk position', leanScore, `${lean.toFixed(1)}° from vertical`, 'This compares the shoulder-to-hip line across clear side-view frames.', lean < 3 ? 'Run tall, then let your whole body tip forward slightly from the ankles.' : lean > 12 ? 'Reduce the bend at the waist. Keep ribs stacked over your hips.' : 'Keep this relaxed whole-body lean; avoid folding forward at the waist.'),
