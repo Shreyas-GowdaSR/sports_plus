@@ -199,6 +199,35 @@ export function proteinAfter(kind: SessionKind, planWeight: number): [number, nu
 const range = (low: number, high: number, unit = 'g') => `${Math.round(Math.min(low, high))}–${Math.round(Math.max(low, high))} ${unit}`
 
 /**
+ * Daily energy to maintain weight while training well (not a weight-loss target).
+ * Resting energy from Mifflin–St Jeor (actual weight, height, age, sex), times a
+ * physical-activity factor: rest day 1.4–1.5, about an hour of training 1.6–1.8,
+ * hard, long or double-session days 1.9–2.1.
+ */
+export type DayLoad = 'rest' | 'training' | 'hard'
+const ACTIVITY: Record<DayLoad, [number, number]> = { rest: [1.4, 1.5], training: [1.6, 1.8], hard: [1.9, 2.1] }
+
+export function restingEnergy(profile: AthleteProfile) {
+  const sexTerm = profile.gender === 'female' ? -161 : profile.gender === 'male' ? 5 : -78
+  return 10 * profile.weightKg + 6.25 * profile.heightCm - 5 * profile.age + sexTerm
+}
+
+export function energyFor(profile: AthleteProfile, load: DayLoad): [number, number] {
+  const base = restingEnergy(profile)
+  const [low, high] = ACTIVITY[load]
+  return [Math.round((base * low) / 50) * 50, Math.round((base * high) / 50) * 50]
+}
+
+/** Rest day; normal training day (up to about 90 min, or gym); hard day (race or 90 min+). */
+export function dayLoad(session: Session): DayLoad {
+  if (session.kind === 'rest') return 'rest'
+  if (session.kind === 'race' || session.minutes >= 90) return 'hard'
+  return 'training'
+}
+
+const DAY_NAME: Record<DayLoad, string> = { rest: 'Rest day', training: 'Normal training day', hard: 'Hard or long day (race or 90 min+)' }
+
+/**
  * Every target the coach may need, worked out here so the language model never
  * does arithmetic. All ranges are written low–high.
  */
@@ -211,8 +240,16 @@ export function athleteNumbers(profile: AthleteProfile) {
   const dayWaterLow = clamp(fluidKg * 0.03, female ? 1.6 : 2.0, 3.0); const dayWaterHigh = clamp(fluidKg * 0.035, female ? 1.9 : 2.3, 3.5)
   const sweat = clamp(fluidKg / 65, 0.8, 1.2)
   const hour = (low: number, high: number) => `${round50(low * sweat)}–${Math.min(850, round50(high * sweat))} ml per hour`
+  const restDay = energyFor(profile, 'rest'); const trainingDay = energyFor(profile, 'training'); const hardDay = energyFor(profile, 'hard')
+  const kcal = (low: number, high: number) => range(Math.round(low / 10) * 10, Math.round(high / 10) * 10, 'kcal')
   return [
     `Plan weight for food: ${kg} kg (BMI ${body.bmi}, ${body.category}). Actual weight for water: ${fluidKg} kg.`,
+    'DAILY ENERGY (calories to keep weight steady and train well; this is not a diet):',
+    `- Rest day: ${range(restDay[0], restDay[1], 'kcal')}`,
+    `- Normal training day (about 1 hour, or a gym session): ${range(trainingDay[0], trainingDay[1], 'kcal')}`,
+    `- Hard, long (90 min+) or two-session day: ${range(hardDay[0], hardDay[1], 'kcal')}`,
+    `- On a normal training day split it as 3 main meals of about ${kcal(trainingDay[0] * 0.25, trainingDay[1] * 0.25)} and 2 snacks of about ${kcal(trainingDay[0] * 0.125, trainingDay[1] * 0.125)}`,
+    `FAT PER DAY: ${range(0.8 * kg, 1.2 * kg)}, mostly from cooking oil, ghee, nuts, seeds and milk`,
     'PROTEIN AFTER A SESSION (eat within 0–2 hours):',
     `- After a run (easy, long, hard or race): ${range(run[0], run[1])}`,
     `- After gym, weights or any intense strength workout: ${range(gym[0], gym[1])}`,
@@ -332,7 +369,8 @@ export function buildFuelPlan(profile: AthleteProfile, session: Session): FuelPl
   }
   water.push({ when: 'Whole day', lines: [`About ${dayLo.toFixed(1)}–${dayHi.toFixed(1)} litres, spread across the day`], note: rest ? undefined : 'This is on top of what you drink during training.' })
 
-  const dayCarbs = rest ? [3, 5] : kind === 'race' || long ? [6, 8] : hard || minutes >= 60 ? [5, 7] : [3, 5]
+  const load = dayLoad(session)
+  const dayCarbs = load === 'rest' ? [3, 5] : load === 'hard' ? [6, 8] : minutes >= 45 || kind === 'strength' ? [5, 7] : [3, 5]
   const numbers = [
     { label: 'BMI', value: `${body.bmi} · ${body.category}` },
     { label: 'Plan weight', value: `${kg} kg` },
@@ -342,6 +380,8 @@ export function buildFuelPlan(profile: AthleteProfile, session: Session): FuelPl
     { label: 'Fluid during', value: rest || minutes < 30 ? '—' : `${rateLo}–${rateHi} ml / hour` },
     { label: 'Carbs for the day', value: `${Math.round(dayCarbs[0] * kg)}–${Math.round(dayCarbs[1] * kg)} g` },
     { label: 'Protein for the day', value: kind === 'strength' ? range(1.6 * kg, 2.0 * kg) : range(1.4 * kg, 1.8 * kg) },
+    { label: 'Energy for the day', value: range(...energyFor(profile, load), 'kcal') },
+    { label: 'Day type', value: DAY_NAME[load] },
     { label: 'Water for the day', value: `${dayLo.toFixed(1)}–${dayHi.toFixed(1)} L` },
   ]
 
@@ -361,5 +401,5 @@ export function planAsText(plan: FuelPlan) {
   const block = (title: string, steps: FuelStep[]) =>
     `${title}:\n${steps.map(step => `- ${step.when}: ${step.lines.join(step.choice ? ' OR ' : '; ')}${step.note ? ` (${step.note})` : ''}`).join('\n')}`
   return [plan.label, `BODY: BMI ${plan.body.bmi} (${plan.body.category}); food amounts use plan weight ${plan.body.planWeight} kg, water uses actual weight`, block('BEFORE', plan.before), block('DURING', plan.during), block('AFTER', plan.after), block('WATER', plan.water),
-    `TARGETS (hidden unless athlete asks): ${plan.numbers.map(n => `${n.label} ${n.value}`).join('; ')}`].join('\n')
+    `TODAY'S TARGETS (use these for "Your day" when the question is about today's session): ${plan.numbers.map(n => `${n.label} ${n.value}`).join('; ')}`].join('\n')
 }

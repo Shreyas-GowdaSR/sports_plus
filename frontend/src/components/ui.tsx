@@ -26,12 +26,13 @@ export function ScoreRing({ score, size = 132, label = 'Form' }: { score: number
 }
 
 // A deliberately tiny Markdown subset for coach replies: paragraphs, "- " bullets,
-// "### " headings and **bold**. Rendered as React elements, never as raw HTML.
+// "### " headings, **bold** and *italic*. Rendered as React elements, never as raw HTML.
 function inline(text: string): ReactNode[] {
-  return text.split(/(\*\*[^*]+\*\*)/g).map((part, index) =>
-    part.startsWith('**') && part.endsWith('**') && part.length > 4
-      ? <strong key={index}>{part.slice(2, -2)}</strong>
-      : <Fragment key={index}>{part.replace(/\*\*/g, '')}</Fragment>)
+  return text.split(/(\*\*[^*]+\*\*|\*[^*\s][^*]*\*|_[^_\s][^_]*_)/g).map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) return <strong key={index}>{part.slice(2, -2)}</strong>
+    if (part.length > 2 && ((part.startsWith('*') && part.endsWith('*')) || (part.startsWith('_') && part.endsWith('_')))) return <em key={index}>{part.slice(1, -1)}</em>
+    return <Fragment key={index}>{part.replace(/\*\*/g, '')}</Fragment>
+  })
 }
 
 export function Markdown({ text }: { text: string }) {
