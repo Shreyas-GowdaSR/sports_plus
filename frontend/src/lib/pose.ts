@@ -26,7 +26,7 @@ const waitFor = (target: EventTarget, event: string) => new Promise<void>((resol
   target.addEventListener('error', () => reject(new Error('The selected video could not be decoded.')), { once: true })
 })
 
-export async function sampleVideo(file: File, onProgress: (percentage: number) => void): Promise<{ samples: PoseSample[]; duration: number }> {
+export async function sampleVideo(file: File, onProgress: (percentage: number) => void): Promise<{ samples: PoseSample[]; duration: number; aspect: number }> {
   const video = document.createElement('video')
   video.muted = true; video.playsInline = true; video.preload = 'auto'
   const objectUrl = URL.createObjectURL(file)
@@ -54,6 +54,6 @@ export async function sampleVideo(file: File, onProgress: (percentage: number) =
       await new Promise((resolve) => setTimeout(resolve, 0))
     }
     onProgress(100)
-    return { samples, duration }
+    return { samples, duration, aspect: video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : 1 }
   } finally { URL.revokeObjectURL(objectUrl); video.remove() }
 }

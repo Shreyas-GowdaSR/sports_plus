@@ -51,8 +51,8 @@ export default function App() {
     if (videoUrl) URL.revokeObjectURL(videoUrl)
     setVideoUrl(URL.createObjectURL(file))
     try {
-      const { samples, duration } = await sampleVideo(file, setProgress)
-      const result = longDistanceRunning.analyse(samples, file.name, duration)
+      const { samples, duration, aspect } = await sampleVideo(file, setProgress)
+      const result = longDistanceRunning.analyse(samples, file.name, duration, aspect)
       result.sourceName = `Run on ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`
       if (result.readiness === 'ready') addCheck(result)
       setReport(result); setScreen('form')

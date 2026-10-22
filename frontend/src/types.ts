@@ -49,7 +49,8 @@ export type SportModule = {
   id: string
   label: string
   captureGuide: string[]
-  analyse: (samples: PoseSample[], sourceName: string, duration: number) => RunningAnalysis
+  /** aspect = video width / height, used to undo MediaPipe's per-axis normalisation. */
+  analyse: (samples: PoseSample[], sourceName: string, duration: number, aspect?: number) => RunningAnalysis
 }
 
 // ── Athlete ──────────────────────────────────────────────────
