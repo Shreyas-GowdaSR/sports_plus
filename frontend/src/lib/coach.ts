@@ -1,6 +1,6 @@
 import type { AthleteProfile } from '../types'
 import type { FuelPlan, FuelStep } from './fuel'
-import { planAsText } from './fuel'
+import { athleteNumbers, planAsText } from './fuel'
 import { analysisAsText, drillsFor, talkFor } from './plainTalk'
 import type { SavedCheck } from './store'
 
@@ -20,6 +20,7 @@ function contextPayload({ profile, plan, latest }: CoachContext) {
       `Diet: ${DIET_WORD[profile.diet]} · prefers ${REGION_WORD[profile.region]}`,
       `Avoid / allergies: ${profile.avoid.trim() || 'none'}`,
     ].join('\n'),
+    numbers: athleteNumbers(profile),
     plan: planAsText(plan),
     form: latest ? analysisAsText(latest) : '',
   }
@@ -63,6 +64,15 @@ export async function askCoach(messages: ChatMessage[], context: CoachContext, o
     onText(text)
   }
   return text.trim().length > 0 ? { ok: true } : { ok: false, reason: 'unavailable', retryAt: null }
+}
+
+/**
+ * Safety net for model text: a range with a unit written high to low ("28 to 22 g")
+ * is shown low to high instead ("22–28 g").
+ */
+export function orderRanges(text: string) {
+  return text.replace(/(\d+(?:\.\d+)?)\s*(?:to|–|—|-)\s*(\d+(?:\.\d+)?)(\s*(?:g\b|grams?\b|ml\b|kg\b|litres?\b|liters?\b|L\b|minutes?\b|min\b|hours?\b|katoris?\b|glasses\b|cups\b))/gi,
+    (match, a: string, b: string, unit: string) => (Number(a) > Number(b) ? `${b}–${a}${unit}` : match))
 }
 
 /** One honest line explaining why this answer is not from the live AI. */

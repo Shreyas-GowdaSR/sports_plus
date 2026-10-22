@@ -182,6 +182,58 @@ export function bodyFor(profile: AthleteProfile): Body {
   }
 }
 
+/**
+ * Protein in the 0–2 h after a session, low–high in grams.
+ * Endurance: 0.25–0.3 g/kg (ACSM/AND 2016). Strength or gym: 0.3–0.4 g/kg with at
+ * least 20 g (ISSN position stand on protein and exercise, 2017).
+ */
+export function proteinAfter(kind: SessionKind, planWeight: number): [number, number] {
+  if (kind === 'strength') {
+    const low = Math.max(20, Math.round(0.3 * planWeight))
+    return [low, Math.max(low + 5, Math.min(40, Math.round(0.4 * planWeight)))]
+  }
+  const low = Math.max(15, Math.round(0.25 * planWeight))
+  return [low, Math.max(low + 3, Math.min(30, Math.round(0.3 * planWeight)))]
+}
+
+const range = (low: number, high: number, unit = 'g') => `${Math.round(Math.min(low, high))}–${Math.round(Math.max(low, high))} ${unit}`
+
+/**
+ * Every target the coach may need, worked out here so the language model never
+ * does arithmetic. All ranges are written low–high.
+ */
+export function athleteNumbers(profile: AthleteProfile) {
+  const body = bodyFor(profile)
+  const kg = body.planWeight
+  const fluidKg = profile.weightKg
+  const run = proteinAfter('easy', kg); const gym = proteinAfter('strength', kg)
+  const female = profile.gender === 'female'
+  const dayWaterLow = clamp(fluidKg * 0.03, female ? 1.6 : 2.0, 3.0); const dayWaterHigh = clamp(fluidKg * 0.035, female ? 1.9 : 2.3, 3.5)
+  const sweat = clamp(fluidKg / 65, 0.8, 1.2)
+  const hour = (low: number, high: number) => `${round50(low * sweat)}–${Math.min(850, round50(high * sweat))} ml per hour`
+  return [
+    `Plan weight for food: ${kg} kg (BMI ${body.bmi}, ${body.category}). Actual weight for water: ${fluidKg} kg.`,
+    'PROTEIN AFTER A SESSION (eat within 0–2 hours):',
+    `- After a run (easy, long, hard or race): ${range(run[0], run[1])}`,
+    `- After gym, weights or any intense strength workout: ${range(gym[0], gym[1])}`,
+    'PROTEIN PER DAY (spread over 4–5 meals):',
+    `- Running training days: ${range(1.4 * kg, 1.8 * kg)}, about ${range(0.3 * kg, 0.4 * kg)} per meal`,
+    `- Heavy gym or strength days: ${range(1.6 * kg, 2.0 * kg)}, about ${range(0.3 * kg, 0.4 * kg)} per meal`,
+    'CARBS PER DAY:',
+    `- Rest or light day: ${range(3 * kg, 5 * kg)}`,
+    `- About 1 hour of training: ${range(5 * kg, 7 * kg)}`,
+    `- 1–3 hours of hard or long training: ${range(6 * kg, 8 * kg)}`,
+    'CARBS AFTER A SESSION:',
+    `- After a hard or long run, or before a second session the same day: ${range(1.0 * kg, 1.2 * kg)} in the first hour`,
+    `- After gym or strength work: ${range(0.5 * kg, 1.0 * kg)} with the next meal`,
+    'WATER:',
+    `- Whole day: ${dayWaterLow.toFixed(1)}–${dayWaterHigh.toFixed(1)} litres, plus what is drunk during training (add 0.5 litre on hot days)`,
+    `- 2–4 hours before a run: ${range(fluidKg * 5, fluidKg * 7, 'ml')}`,
+    `- During a run: ${hour(400, 550)} cool, ${hour(450, 700)} normal, ${hour(600, 800)} hot`,
+    '- After: 1.5 litres for every 1 kg of body weight lost, or 500–750 ml in the first hour',
+  ].join('\n')
+}
+
 // ── Plan ─────────────────────────────────────────────────────
 export function buildFuelPlan(profile: AthleteProfile, session: Session): FuelPlan {
   const body = bodyFor(profile)
@@ -199,7 +251,8 @@ export function buildFuelPlan(profile: AthleteProfile, session: Session): FuelPl
   const preGkg = rest ? 0 : kind === 'race' || minutes >= 120 ? 2 : long || hard ? 1.5 : minutes > 45 ? 1 : 0
   const preCarbs = Math.round(preGkg * kg)
   const duringCarbs = rest || minutes < 60 ? 0 : minutes < 90 ? 30 : minutes <= 150 ? 45 : 60
-  const recoveryProtein = clamp(Math.round(0.3 * kg), 15, 30)
+  const [proteinLow, proteinHigh] = proteinAfter(kind, kg)
+  const recoveryProtein = Math.round((proteinLow + proteinHigh) / 2)
   const recoveryCarbs = Math.round((hard || long ? 1 : 0.6) * kg)
   // 0.4–0.8 L/h for a typical adult, scaled with body size (sweat rate tracks body mass).
   const sweatScale = clamp(fluidKg / 65, 0.8, 1.2)
@@ -285,10 +338,10 @@ export function buildFuelPlan(profile: AthleteProfile, session: Session): FuelPl
     { label: 'Plan weight', value: `${kg} kg` },
     { label: 'Carbs before', value: preCarbs ? `${preCarbs} g` : 'None needed' },
     { label: 'Carbs during', value: duringCarbs ? `${duringCarbs} g / hour` : 'None needed' },
-    { label: 'Protein after', value: `${recoveryProtein} g` },
+    { label: 'Protein after', value: range(proteinLow, proteinHigh) },
     { label: 'Fluid during', value: rest || minutes < 30 ? '—' : `${rateLo}–${rateHi} ml / hour` },
     { label: 'Carbs for the day', value: `${Math.round(dayCarbs[0] * kg)}–${Math.round(dayCarbs[1] * kg)} g` },
-    { label: 'Protein for the day', value: `${Math.round(1.4 * kg)}–${Math.round(1.8 * kg)} g` },
+    { label: 'Protein for the day', value: kind === 'strength' ? range(1.6 * kg, 2.0 * kg) : range(1.4 * kg, 1.8 * kg) },
     { label: 'Water for the day', value: `${dayLo.toFixed(1)}–${dayHi.toFixed(1)} L` },
   ]
 

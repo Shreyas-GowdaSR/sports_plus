@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowUp, Mic, RotateCcw, Sparkles, Square } from 'lucide-react'
-import type { ChatMessage } from '../lib/coach'
+import { orderRanges, type ChatMessage } from '../lib/coach'
 import { Markdown } from '../components/ui'
 import { useVoiceInput } from '../lib/voice'
 
@@ -46,7 +46,7 @@ export function Coach({ messages, busy, live, onSend, onClear }: Props) {
             : (
               <div className="msg assistant" key={index}>
                 {message.offline && <div className="msg-meta offline-notice">{message.notice ?? 'Offline answer from your plan'}</div>}
-                {message.text ? <Markdown text={message.text} /> : <span className="typing"><i /><i /><i /></span>}
+                {message.text ? <Markdown text={orderRanges(message.text)} /> : <span className="typing"><i /><i /><i /></span>}
               </div>
             ))}
           {busy && last?.role === 'user' && <div className="msg assistant"><span className="typing"><i /><i /><i /></span></div>}

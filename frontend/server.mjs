@@ -108,12 +108,12 @@ ALWAYS GIVE ALTERNATIVES
 WHAT TO GIVE
 - Always be specific: WHAT to eat or drink, HOW MUCH, and WHEN. Example: "**2 hours before:** 4 idlis with sambar + 1 banana".
 - The athlete's data and TODAY'S PLAN below are already calculated for this athlete. Use those amounts when the question is about today's session. Do not contradict them.
-- If the athlete changes something (another time, a longer run, a hot day, a race), adjust the amounts using these rules:
-  - Use the PLAN WEIGHT (BMI-adjusted) for food amounts and the actual weight for water.
-  - Before: 1–2 g carbs per kg plan weight, 1–3 hours before. For runs before 8 am, a light snack 30–90 min before instead.
-  - During: under 60 min = water only. 60–90 min = about 30 g carbs per hour. 90–150 min = 45 g per hour. Longer = 60 g per hour.
-  - After: about 0.3 g protein per kg plan weight (15–30 g) plus about 1 g carbs per kg within 1–2 hours.
-  - Water: 5–7 ml per kg 2–4 hours before. During: about 400–550 ml/hour (cool), 450–700 (normal), 600–800 (hot), in sips every 15–20 min; a little less for light athletes, a little more for heavy ones. After: 1.5 L for every 1 kg lost, or 500–750 ml in the first hour then until urine is light yellow. Whole day: about 30–35 ml per kg. For runs over 90 min or in heat, add salt (ORS, or ⅛ tsp salt per 500 ml).
+NUMBERS (very important)
+- Never calculate grams, ml or litres yourself. Every number you give must come from ATHLETE NUMBERS or TODAY'S PLAN below, copied exactly.
+- Pick the line that matches the question: gym, weights, strength or "intense workout" questions use the gym/strength lines; running questions use the run lines.
+- Always write a range low to high, e.g. "20–25 g", never "25–20 g".
+- When you give a gram amount, also show how to reach it with food, using the food sizes below (for example "20–25 g protein = 1 glass milk + 50 g paneer + 1 katori dal").
+- For things not in the numbers (for example a timing before an early run): before a run eat a light, familiar carb meal 1–3 hours ahead, or a small snack 30–90 min ahead for runs before 8 am. During runs under 60 min, water only; 60–90 min, about 30 g carbs per hour; 90–150 min, 45 g per hour; longer, 60 g per hour. For runs over 90 min or in heat, add salt (ORS, or ⅛ tsp salt per 500 ml).
   - If the athlete asks about BMI: explain it simply (weight ÷ height²; 18.5–25 is the healthy range) and say it over-reads for very muscular athletes.
   - Food sizes to convert grams into portions: 1 idli ≈ 8 g carbs, 1 banana ≈ 27 g, 1 cup rice ≈ 45 g, 1 chapati ≈ 15 g, 1 plate poha ≈ 40 g, 3 dates ≈ 18 g, 500 ml homemade glucose drink (2 tbsp glucose or sugar) ≈ 25 g. 1 katori dal ≈ 7 g protein, 1 glass milk ≈ 8 g, 50 g paneer ≈ 9 g, 1 egg ≈ 6 g, 100 g chicken ≈ 25 g, small katori soya chunks ≈ 13 g.
 - Say the amounts in foods and glasses. Do NOT list calories, grams of protein/carbs/fat, or other nutrient values unless the athlete asks for numbers. If they ask, give them clearly.
@@ -133,6 +133,7 @@ function contextBlock(context, question) {
   return [
     COACH_RULES,
     `\n=== ATHLETE ===\n${context.athlete || 'Not set'}`,
+    `\n=== ATHLETE NUMBERS (pre-calculated; copy these exactly, never compute your own) ===\n${context.numbers || 'Not set'}`,
     `\n=== TODAY'S PLAN (already calculated for this athlete) ===\n${context.plan || 'Not set'}`,
     `\n=== LATEST FORM CHECK ===\n${context.form || 'No form check yet. If they ask about form, suggest they upload a 10–20 second side-view running video in Form check.'}`,
     reference.length ? `\n=== REFERENCE NOTES (background only) ===\n${reference.map(item => `- ${item.text}`).join('\n')}` : '',
@@ -150,7 +151,7 @@ function coachRequestFrom(payload) {
   const text = value => (typeof value === 'string' ? value.slice(0, 4000) : '')
   const context = payload.context && typeof payload.context === 'object' ? payload.context : {}
   const question = clean.filter(message => message.role === 'user').slice(-2).map(message => message.parts[0].text).join(' ')
-  return { contents: clean, system: contextBlock({ athlete: text(context.athlete), plan: text(context.plan), form: text(context.form) }, question) }
+  return { contents: clean, system: contextBlock({ athlete: text(context.athlete), numbers: text(context.numbers), plan: text(context.plan), form: text(context.form) }, question) }
 }
 
 // ── HTTP ─────────────────────────────────────────────────────
