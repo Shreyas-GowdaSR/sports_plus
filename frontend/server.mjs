@@ -1,8 +1,9 @@
 import { createServer } from 'node:http'
-import { createReadStream, existsSync, readFileSync, readdirSync } from 'node:fs'
+import { createReadStream, existsSync, readFileSync } from 'node:fs'
 import { dirname, extname, join, normalize, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { GoogleGenAI } from '@google/genai'
+import { createRetriever } from './rag.mjs'
 
 const root = dirname(fileURLToPath(import.meta.url))
 
@@ -22,46 +23,18 @@ const distPath = join(root, 'dist')
 const model = process.env.GEMINI_MODEL ?? process.env.GEMINI_NUTRITION_MODEL ?? 'gemini-3.8-flash'
 const gemini = process.env.GEMINI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null
 
-// ── Reference library (RAG) ──────────────────────────────────
-// Knowledge files are background reading for the coach, never the answer itself.
+// ── Evidence library (RAG) ───────────────────────────────────
+// Cited passages from knowledge/corpus, embedded into a FAISS index by rag/build_index.py
+// and searched by meaning (rag.mjs). The coach uses them silently to get facts right.
 const knowledgeDir = join(root, 'knowledge')
-const DUBIOUS = /ashwagandha|nattokinase|clinically proven|2000%|mandatory/i
+const retriever = createRetriever({ indexDir: join(knowledgeDir, 'index'), gemini })
 const STOP = new Set('about after also and are can could does for from have how into is just like meal much my need should some that the their there this through what when which with would you your will want tell give me'.split(' '))
 const tokenize = text => text.toLowerCase().match(/[a-z0-9]+/g)?.filter(word => word.length > 2 && !STOP.has(word)) ?? []
 
-const passages = ['nutrition', 'form'].flatMap(folder => {
-  const dir = join(knowledgeDir, folder)
-  if (!existsSync(dir)) return []
-  return readdirSync(dir).filter(name => name.endsWith('.txt')).flatMap(name =>
-    readFileSync(join(dir, name), 'utf8').split(/\n\s*\n/)
-      .map(text => text.replace(/\s+/g, ' ').replace(/\s*Source:.*$/i, '').trim())
-      .filter(text => text.length > 40 && !DUBIOUS.test(text))
-      .map(text => ({ text, topic: folder, terms: tokenize(text) })))
-})
-const docFreq = new Map()
-for (const passage of passages) for (const term of new Set(passage.terms)) docFreq.set(term, (docFreq.get(term) ?? 0) + 1)
-
-const EXPAND = {
-  before: ['pre', 'workout'], after: ['post', 'recovery'], during: ['carbohydrate', 'fluid'], water: ['hydration', 'fluid', 'sodium'],
-  drink: ['hydration', 'fluid'], cramp: ['sodium', 'hydration'], eat: ['carbohydrate', 'food'], protein: ['recovery', 'muscle'],
-  knee: ['injury', 'overstriding'], shin: ['injury', 'overstriding'], cadence: ['steps', 'stride'], form: ['gait', 'posture'],
-}
-
-function retrieve(query, limit = 4) {
-  const terms = new Set(tokenize(query).flatMap(term => [term, ...(EXPAND[term] ?? [])]))
-  if (!terms.size) return []
-  return passages.map(passage => {
-    const counts = new Map()
-    for (const term of passage.terms) counts.set(term, (counts.get(term) ?? 0) + 1)
-    let score = 0
-    for (const term of terms) {
-      const count = counts.get(term); if (!count) continue
-      const df = docFreq.get(term) ?? 0
-      const idf = Math.log(1 + (passages.length - df + 0.5) / (df + 0.5))
-      score += idf * (count * 2.2) / (count + 1.2 * (0.25 + 0.75 * passage.terms.length / 90))
-    }
-    return { ...passage, score }
-  }).filter(passage => passage.score > 1).sort((a, b) => b.score - a.score).slice(0, limit)
+async function findEvidence(question) {
+  if (!retriever || !question.trim()) return { mode: 'none', hits: [] }
+  try { return await retriever.search(question) }
+  catch (error) { console.warn('[rag] search failed:', error); return { mode: 'none', hits: [] } }
 }
 
 // Food values from the Kaggle Indian Food Nutrition dataset, only when the athlete asks for them.
@@ -129,7 +102,7 @@ FOOD RULES
 - Whenever you suggest a food, drink or meal, give a swap or two with amounts. If they dislike or cannot get something, lead with the alternatives.
 - Prefer cheap, easy Indian foods; add a hostel or travel option when it helps.
 - For running-form questions, use the LATEST FORM CHECK: the one most important fix and 1–2 drills with sets and reps.
-- REFERENCE NOTES are background facts. Use them only to check facts or add one tip; never copy them or mention "notes", "sources", "RAG" or "dataset".
+- EVIDENCE holds short passages from sports-science research and Indian nutrition guidelines, picked for this question. Use them to get facts right and to add a useful tip or warning. If a passage disagrees with ATHLETE NUMBERS, follow ATHLETE NUMBERS. Ignore passages that do not fit the question. Write everything in your own simple words: never copy passages, never add citations, reference numbers or a sources list, and never mention "evidence", "passages", "studies say", "sources", "RAG" or "dataset".
 - If something important is missing (run time, distance, gym or run), make a sensible guess, say it in one line, and answer anyway.
 
 SAFETY
@@ -138,8 +111,7 @@ SAFETY
 - No supplement or medicine doses. For pain, injury, fainting, chest pain, diabetes, pregnancy, eating disorders, very heavy periods or long tiredness: kindly tell them to see a doctor or sports physio or dietitian first, then give only safe general tips.
 - Never tell them to drink as much water as possible. Too much plain water during long runs is dangerous.`
 
-function contextBlock(context, question) {
-  const reference = retrieve(question)
+function contextBlock(context, question, evidence) {
   const values = foodValues(question)
   return [
     COACH_RULES,
@@ -147,12 +119,12 @@ function contextBlock(context, question) {
     `\n=== ATHLETE NUMBERS (pre-calculated; copy these exactly, never compute your own) ===\n${context.numbers || 'Not set'}`,
     `\n=== TODAY'S PLAN (already calculated for this athlete) ===\n${context.plan || 'Not set'}`,
     `\n=== LATEST FORM CHECK ===\n${context.form || 'No form check yet. If they ask about form, suggest they upload a 10–20 second side-view running video in Form check.'}`,
-    reference.length ? `\n=== REFERENCE NOTES (background only) ===\n${reference.map(item => `- ${item.text}`).join('\n')}` : '',
+    evidence.length ? `\n=== EVIDENCE (for checking facts; do not cite) ===\n${evidence.map(item => `- ${item.section}: ${item.text.replace(/\s+/g, ' ')}`).join('\n')}` : '',
     values.length ? `\n=== FOOD VALUES (the athlete asked for numbers) ===\n${values.map(value => `- ${value}`).join('\n')}` : '',
   ].join('\n')
 }
 
-function coachRequestFrom(payload) {
+async function coachRequestFrom(payload) {
   const messages = Array.isArray(payload.messages) ? payload.messages : []
   const clean = messages.slice(-12).flatMap(message => {
     if (!message || typeof message.text !== 'string' || !message.text.trim()) return []
@@ -162,7 +134,9 @@ function coachRequestFrom(payload) {
   const text = value => (typeof value === 'string' ? value.slice(0, 4000) : '')
   const context = payload.context && typeof payload.context === 'object' ? payload.context : {}
   const question = clean.filter(message => message.role === 'user').slice(-2).map(message => message.parts[0].text).join(' ')
-  return { contents: clean, system: contextBlock({ athlete: text(context.athlete), numbers: text(context.numbers), plan: text(context.plan), form: text(context.form) }, question) }
+  const evidence = await findEvidence(question)
+  const system = contextBlock({ athlete: text(context.athlete), numbers: text(context.numbers), plan: text(context.plan), form: text(context.form) }, question, evidence.hits)
+  return { contents: clean, system, evidence }
 }
 
 // ── HTTP ─────────────────────────────────────────────────────
@@ -257,14 +231,15 @@ async function openStream(contents, system) {
 
 async function streamCoach(request, response) {
   if (!gemini) return send(response, 503, { error: 'GEMINI_API_KEY is not set on the server.', reason: 'no-key' })
-  const { contents, system } = coachRequestFrom(await readJson(request))
+  const { contents, system, evidence } = await coachRequestFrom(await readJson(request))
   let opened
   try { opened = await openStream(contents, system) }
   catch (error) {
     if (error instanceof CoachUnavailable) return send(response, 503, { error: 'All AI models are busy or out of free quota.', reason: error.reason, retryAt: error.retryAt })
     throw error
   }
-  response.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Coach-Model': opened.used })
+  response.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Coach-Model': opened.used,
+    'X-Coach-Retrieval': `${evidence.mode}; ${evidence.hits.map(hit => hit.id).join(', ') || 'none'}` })
   let wrote = false
   for await (const chunk of opened.stream) {
     const text = chunk.text
@@ -290,7 +265,12 @@ const server = createServer(async (request, response) => {
   try {
     if (request.method === 'GET' && url.pathname === '/api/coach/status') {
       const ready = pool.filter(name => !retired.has(name) && (parkedUntil.get(name) ?? 0) <= Date.now())
-      return send(response, 200, { live: Boolean(gemini) && ready.length > 0, model: ready[0] ?? null, models: ready.length })
+      return send(response, 200, { live: Boolean(gemini) && ready.length > 0, model: ready[0] ?? null, models: ready.length, rag: retriever?.info ?? null })
+    }
+    if (request.method === 'GET' && url.pathname === '/api/rag/search') {
+      const question = (url.searchParams.get('q') ?? '').slice(0, 500)
+      if (!question.trim()) return send(response, 400, { error: 'Add ?q=your question' })
+      return send(response, 200, { question, ...(await findEvidence(question)) })
     }
     if (request.method === 'POST' && url.pathname === '/api/coach') return await streamCoach(request, response)
     if (url.pathname.startsWith('/api/')) return send(response, 404, { error: 'Unknown API route' })
@@ -302,4 +282,4 @@ const server = createServer(async (request, response) => {
   }
 })
 
-server.listen(port, '127.0.0.1', () => console.log(`SportsAI+ server on http://127.0.0.1:${port} · coach ${gemini ? 'live' : 'offline (no GEMINI_API_KEY)'} · ${passages.length} reference passages`))
+server.listen(port, '127.0.0.1', () => console.log(`SportsAI+ server on http://127.0.0.1:${port} · coach ${gemini ? 'live' : 'offline (no GEMINI_API_KEY)'} · ${retriever ? `RAG: ${retriever.info.chunks} cited passages, ${retriever.info.vectors ? `vector index (${retriever.info.model}, ${retriever.info.dim} dims)` : 'keyword search only (no vectors.f32)'}` : 'RAG: no index (run python rag/build_index.py)'}`))

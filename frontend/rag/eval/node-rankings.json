@@ -1,0 +1,478 @@
+{
+ "how much protein should I take after an intense gym workout": [
+  45,
+  48,
+  47,
+  46,
+  49
+ ],
+ "how many grams of protein per day for a runner": [
+  45,
+  48,
+  47,
+  46,
+  50
+ ],
+ "is it ok to eat all my protein at dinner": [
+  47,
+  45,
+  49,
+  48,
+  50
+ ],
+ "should I drink milk before going to bed": [
+  49,
+  56,
+  57,
+  58,
+  60
+ ],
+ "I am pure veg, how do I get enough protein": [
+  50,
+  35,
+  39,
+  46,
+  38
+ ],
+ "is whey powder safe, my gym trainer says I must take it": [
+  51,
+  61,
+  60,
+  46,
+  45
+ ],
+ "how much protein is in paneer and soya chunks": [
+  35,
+  50,
+  39,
+  46,
+  38
+ ],
+ "cheap protein options in hostel mess": [
+  39,
+  35,
+  50,
+  51,
+  38
+ ],
+ "why is dal rice better together than separately": [
+  38,
+  37,
+  35,
+  50,
+  36
+ ],
+ "how many chapatis or how much rice should I eat on a heavy training day": [
+  5,
+  36,
+  8,
+  7,
+  48
+ ],
+ "what should I eat 2 hours before a morning run": [
+  17,
+  7,
+  14,
+  5,
+  8
+ ],
+ "my half marathon is on sunday, should I eat extra rice on friday and saturday": [
+  8,
+  7,
+  5,
+  17,
+  36
+ ],
+ "I train twice a day, how do I recover quickly between sessions": [
+  9,
+  56,
+  32,
+  67,
+  58
+ ],
+ "is it bad to avoid ghee and oil completely": [
+  37,
+  6,
+  5,
+  40,
+  15
+ ],
+ "do I need to eat anything during a 40 minute run": [
+  14,
+  15,
+  7,
+  16,
+  17
+ ],
+ "what can I eat during a 25 km long run instead of costly gels": [
+  15,
+  14,
+  16,
+  31,
+  5
+ ],
+ "I get stomach upset and have to rush to the toilet during races": [
+  16,
+  33,
+  14,
+  7,
+  17
+ ],
+ "race starts at 5 am, what breakfast": [
+  17,
+  7,
+  15,
+  8,
+  14
+ ],
+ "how many litres of water should I drink daily": [
+  28,
+  32,
+  30,
+  34,
+  29
+ ],
+ "how do I know how much I sweat": [
+  30,
+  31,
+  28,
+  32,
+  34
+ ],
+ "how to make homemade electrolyte drink for long runs in chennai summer": [
+  31,
+  15,
+  19,
+  21,
+  18
+ ],
+ "my friend said drink as much water as possible during the marathon, is that right": [
+  33,
+  30,
+  14,
+  29,
+  31
+ ],
+ "my pee is dark yellow after training": [
+  34,
+  32,
+  29,
+  30,
+  33
+ ],
+ "I lost 1 kg during my run, how much should I drink now": [
+  32,
+  30,
+  29,
+  31,
+  33
+ ],
+ "my calves cramp in the last few km, is it lack of salt": [
+  21,
+  33,
+  31,
+  20,
+  19
+ ],
+ "it is 38 degrees here in May, how should I train": [
+  19,
+  18,
+  20,
+  30,
+  31
+ ],
+ "my teammate became confused and collapsed during a hot run, what to do": [
+  20,
+  33,
+  19,
+  21,
+  18
+ ],
+ "my periods have stopped since I started running more": [
+  71,
+  59,
+  70,
+  68,
+  72
+ ],
+ "I want to lose weight fast by eating very little while training for a marathon": [
+  72,
+  70,
+  5,
+  8,
+  71
+ ],
+ "always tired and breathless, could it be low haemoglobin": [
+  73,
+  77,
+  71,
+  74,
+  70
+ ],
+ "should I drink tea right after lunch": [
+  32,
+  34,
+  9,
+  28,
+  62
+ ],
+ "I don't drink milk, how do I keep my bones strong": [
+  75,
+  76,
+  74,
+  77,
+  68
+ ],
+ "do I need a vitamin D tablet": [
+  76,
+  77,
+  73,
+  75,
+  60
+ ],
+ "I am vegan and feel tingling in my feet": [
+  77,
+  73,
+  50,
+  76,
+  74
+ ],
+ "does black coffee before a race help": [
+  62,
+  17,
+  60,
+  16,
+  14
+ ],
+ "which supplements actually work for runners": [
+  60,
+  62,
+  65,
+  73,
+  66
+ ],
+ "how many hours should I sleep as an athlete": [
+  56,
+  58,
+  57,
+  45,
+  47
+ ],
+ "I sleep only 6 hours, does it matter for injuries": [
+  58,
+  57,
+  56,
+  65,
+  63
+ ],
+ "should I skip training during my period": [
+  59,
+  71,
+  58,
+  56,
+  57
+ ],
+ "my foot lands far in front of my body": [
+  0,
+  11,
+  10,
+  23,
+  12
+ ],
+ "how do I increase my steps per minute": [
+  3,
+  1,
+  4,
+  53,
+  2
+ ],
+ "should everyone run at 180 cadence": [
+  4,
+  3,
+  1,
+  2,
+  52
+ ],
+ "pain around my kneecap when I run": [
+  2,
+  23,
+  22,
+  24,
+  0
+ ],
+ "is heel striking bad, should I switch to forefoot": [
+  11,
+  10,
+  12,
+  13,
+  0
+ ],
+ "should I lean forward or stay straight while running": [
+  41,
+  43,
+  42,
+  54,
+  44
+ ],
+ "my hands cross in front of my chest when I run": [
+  42,
+  54,
+  41,
+  43,
+  44
+ ],
+ "where should I look while running, my neck hurts": [
+  43,
+  41,
+  52,
+  44,
+  54
+ ],
+ "I bounce a lot when I run": [
+  44,
+  0,
+  53,
+  1,
+  22
+ ],
+ "my form check says pelvic drop on the left side": [
+  22,
+  26,
+  27,
+  25,
+  24
+ ],
+ "my knees go inward when I land": [
+  23,
+  22,
+  54,
+  0,
+  53
+ ],
+ "glute exercises for runners": [
+  25,
+  24,
+  54,
+  22,
+  27
+ ],
+ "my right leg is weaker than my left, stride symmetry is low": [
+  26,
+  27,
+  22,
+  24,
+  25
+ ],
+ "I did clamshells for weeks but my running form didn't change": [
+  24,
+  25,
+  52,
+  22,
+  54
+ ],
+ "how fast can I increase my weekly kilometres": [
+  64,
+  67,
+  52,
+  63,
+  65
+ ],
+ "does stretching prevent injuries": [
+  65,
+  64,
+  69,
+  63,
+  66
+ ],
+ "will lifting weights make me a slower, bulky runner": [
+  66,
+  65,
+  64,
+  63,
+  24
+ ],
+ "should every run be fast": [
+  67,
+  4,
+  52,
+  53,
+  66
+ ],
+ "pain in one spot on my shin that gets worse every run": [
+  68,
+  64,
+  52,
+  55,
+  2
+ ],
+ "back of my heel hurts in the morning": [
+  69,
+  12,
+  10,
+  13,
+  11
+ ],
+ "I just started running, am I likely to get injured": [
+  63,
+  64,
+  65,
+  67,
+  68
+ ],
+ "how do I change my running technique without getting hurt": [
+  52,
+  13,
+  53,
+  54,
+  3
+ ],
+ "calf exercises for runners": [
+  55,
+  69,
+  25,
+  53,
+  13
+ ],
+ "what is the capital of France": [
+  28,
+  69,
+  65,
+  2,
+  53
+ ],
+ "write a python function to sort a list": [
+  31,
+  28,
+  32,
+  38,
+  15
+ ],
+ "who won the cricket world cup in 2011": [
+  38,
+  35,
+  50,
+  51,
+  37
+ ],
+ "recommend a good movie for the weekend": [
+  15,
+  56,
+  69,
+  67,
+  65
+ ],
+ "how do I fix my laptop wifi": [
+  54,
+  27,
+  22,
+  73,
+  0
+ ],
+ "what is the stock price of reliance": [
+  15,
+  35,
+  5,
+  36,
+  39
+ ]
+}
