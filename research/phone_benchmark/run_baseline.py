@@ -46,7 +46,8 @@ def score_clip(clip, result, truth, trial, labels, code):
     frames = np.clip(np.round(abs_t * MARKER_HZ).astype(int), 0, len(trial.time) - 1)
     # Knee flexion over the whole clip: near leg in side views, both legs otherwise.
     near = 'r' if clip.view in ('side_right', 'oblique_front_right') else 'l' if clip.view in ('side_left', 'oblique_back_left') else None
-    errors = [knee_2d(result['xy'], s) - knee_flexion(trial.joints, s)[frames] for s in ([near] if near else 'rl')]
+    estimate = result['knee'] if 'knee' in result else {s: knee_2d(result['xy'], s) for s in 'lr'}
+    errors = [estimate[s] - knee_flexion(trial.joints, s)[frames] for s in ([near] if near else 'rl')]
     row['knee_rmse'] = float(np.sqrt(np.nanmean(np.concatenate(errors) ** 2)))
     if clip.view.startswith(('front', 'back')) and 'hip_level_p75' in result:
         row['hip_level_err'] = abs(result['hip_level_p75'] - truth['hip_level_p75']) * 100

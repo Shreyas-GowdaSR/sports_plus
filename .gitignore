@@ -22,3 +22,4 @@ storage/results/grf_model/model.joblib
 # Raw motion-capture trials (~420 MB); re-download with research/phone_benchmark/download_raw.py
 storage/datasets/fukuchi2017/raw/
 storage/benchmark/
+storage/models/

@@ -19,10 +19,12 @@ Keypoint semantics: the 2D "hip" is placed halfway between the hip joint centre 
 greater trochanter, as phone pose models label the side of the hip; ground-truth angles
 still use joint centres. Heel and toe are sole-level points (see mocap.py).
 
-The motion capture covers only the pelvis and legs. Pose pipelines also need shoulders
-(for scale and direction), so a rigid synthetic upper body is attached to the pelvis
-(torso 0.288 x height, 6 deg forward lean, shoulder width 0.259 x height, Winter 2009
-proportions). No upper-body measure is scored.
+The motion capture covers only the pelvis and legs. Pose pipelines also need an upper
+body (the app for scale and direction, 3D lifters for a whole skeleton), so a synthetic
+one is attached to the pelvis: torso 0.288 x height with 6 deg forward lean, shoulder
+width 0.259 x height, head and ears, and arms (upper arm 0.186 x height, forearm 0.146 x
+height; Winter 2009) that swing with the opposite thigh (0.6 x its angle) at about 90 deg
+of elbow bend. No upper-body measure is scored.
 
 Keypoints follow MediaPipe's indices for the joints we have:
 0 nose, 11/12 shoulders, 23/24 hips, 25/26 knees, 27/28 ankles, 29/30 heels, 31/32 toes.
@@ -40,8 +42,8 @@ LONG, SHORT = 1920, 1080
 FOCAL = (LONG / 2) / np.tan(np.radians(69 / 2))
 VIEWS = {'side_right': 90, 'side_left': 270, 'oblique_front_right': 45, 'oblique_back_left': 225, 'front': 0, 'back': 180}
 NOISE = {'none': 0.0, 'typical': 1.0, 'hard': 2.0}
-MP = {'nose': 0, 'l_shoulder': 11, 'r_shoulder': 12, 'l_hip': 23, 'r_hip': 24, 'l_knee': 25, 'r_knee': 26,
-      'l_ankle': 27, 'r_ankle': 28, 'l_heel': 29, 'r_heel': 30, 'l_toe': 31, 'r_toe': 32}
+MP = {'nose': 0, 'l_ear': 7, 'r_ear': 8, 'l_shoulder': 11, 'r_shoulder': 12, 'l_elbow': 13, 'r_elbow': 14, 'l_wrist': 15, 'r_wrist': 16,
+      'l_hip': 23, 'r_hip': 24, 'l_knee': 25, 'r_knee': 26, 'l_ankle': 27, 'r_ankle': 28, 'l_heel': 29, 'r_heel': 30, 'l_toe': 31, 'r_toe': 32}
 LEGS = [('l_hip', 'r_hip'), ('l_knee', 'r_knee'), ('l_ankle', 'r_ankle'), ('l_heel', 'r_heel'), ('l_toe', 'r_toe')]
 
 
@@ -71,8 +73,20 @@ def upper_body(points: dict[str, np.ndarray], height_mm: float) -> dict[str, np.
     up = np.array([np.sin(lean), np.cos(lean), 0.0])  # tipped toward +X (forward)
     shoulder_mid = pelvis + 0.288 * height_mm * up
     half = 0.259 * height_mm / 2
-    return {'r_shoulder': shoulder_mid + half * lateral, 'l_shoulder': shoulder_mid - half * lateral,
-            'nose': shoulder_mid + 0.17 * height_mm * up + np.array([60.0, 0, 0])}
+    nose = shoulder_mid + 0.17 * height_mm * up + np.array([60.0, 0, 0])
+    out = {'r_shoulder': shoulder_mid + half * lateral, 'l_shoulder': shoulder_mid - half * lateral, 'nose': nose,
+           'r_ear': nose - np.array([80.0, 20.0, 0]) + 0.04 * height_mm * lateral,
+           'l_ear': nose - np.array([80.0, 20.0, 0]) - 0.04 * height_mm * lateral}
+    for side, other, sign in (('r', 'l', 1), ('l', 'r', -1)):
+        thigh = points[f'{other}_knee'] - points[f'{other}_hip']
+        swing = 0.6 * np.arctan2(thigh[:, 0], -thigh[:, 1])  # forward when the opposite thigh is forward
+        elbow_bend = np.radians(90) + 0.3 * swing
+        shoulder = out[f'{side}_shoulder']
+        upper = 0.186 * height_mm * np.stack([np.sin(swing), -np.cos(swing), np.zeros_like(swing)], axis=-1)
+        fore = 0.146 * height_mm * np.stack([np.sin(swing + elbow_bend), -np.cos(swing + elbow_bend), np.zeros_like(swing)], axis=-1)
+        out[f'{side}_elbow'] = shoulder + upper
+        out[f'{side}_wrist'] = shoulder + upper + fore - sign * 0.03 * height_mm * lateral  # hands drift toward the midline
+    return out
 
 
 def camera(azimuth_deg: float, distance_mm: float, height_mm: float, target: np.ndarray, rng: np.random.Generator):
@@ -105,7 +119,7 @@ def make_clip(trial: Trial, height_mm: float, view: str, fps: int, noise: str, s
     points = {name: joints[name] for name in ('pelvis', 'r_knee', 'l_knee', 'r_ankle', 'l_ankle', 'r_heel', 'l_heel', 'r_toe', 'l_toe')}
     for s in 'rl':
         points[f'{s}_hip'] = (joints[f'{s}_hip'] + joints[f'{s}_gtr']) / 2
-    points.update(upper_body({'pelvis': joints['pelvis'], 'r_hip': joints['r_hip'], 'l_hip': joints['l_hip']}, height_mm))
+    points.update(upper_body({k: joints[k] for k in ('pelvis', 'r_hip', 'l_hip', 'r_knee', 'l_knee')}, height_mm))
     world = np.full((len(times), 33, 3), np.nan)
     for name, k in MP.items():
         world[:, k] = points[name]

@@ -101,3 +101,30 @@ tables: [`results/phase1_tables.md`](results/phase1_tables.md). Main findings, s
   running, clothing, lighting and motion blur are not simulated.
 - **The virtual heel and toe points assume a rigid foot,** so the toe dips below the floor at
   push-off. Measures taken at foot contact are not affected.
+
+## After Phase 1: the app's form check was fixed and re-tested
+
+The rule-based fixes now in `frontend/src/lib/running.ts` were tuned on the 28 development
+runners and tested once on the 8 locked test runners, using the app's **real TypeScript code**:
+
+| File | What it does |
+|---|---|
+| `engine2d.py`, `tune_engine2d.py` | Python version of the improved engine, and its tuning on development runners only (`results/engine2d_params.json`) |
+| `export_app_clips.py` | Writes benchmark clips in the format `pose.ts` produces (to `storage/benchmark/`, gitignored) |
+| `run_app_ts.mjs` | Runs the old and new `running.ts` directly in Node (no Python copy) |
+| `score_app.py` | Scores those runs against motion-capture and force-plate truth → `results/app_comparison.json` |
+
+Held-out runners, side view, typical detector noise: real foot contacts 30% → 99%, step-rate
+error 422 → 0.2 steps/min, contact timing error 52 → 14 ms, oblique/front/back view detection
+50% → 100%, foot-strike label correct when given 25% → 67%.
+
+A second fix came from testing a real elite-runner video: landing distance is now read when the
+foot reaches the ground and compared with development runners at the same step rate. False
+"lands ahead of the body" flags at 3.5 and 4.5 m/s fell from 26% and 20% to 0%. Subtle
+overstriding within the normal range cannot be separated from 2D phone video.
+
+**Not finished:** `lifting.py` (genuine pretrained MotionBERT 3D lifting), `evaluate.py` and
+`run_phase2.py` were written for a 3D-lifting comparison that was stopped before its final
+test on the locked runners. Early checks on development runners suggested MotionBERT roughly
+halves front-view knee-angle error but is worse than 2D from the side. None of it is used by
+the app.
