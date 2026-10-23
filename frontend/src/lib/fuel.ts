@@ -162,10 +162,12 @@ function carbSide(target: number, profile: AthleteProfile) {
 }
 
 function recoveryDrink(profile: AthleteProfile) {
+  const extra = fruit(profile)
+  const withFruit = (base: string) => extra ? `${base} + ${extra.text}` : base
   if (profile.diet === 'vegan' || /milk|dairy|lactose/.test(profile.avoid.toLowerCase())) {
-    return profile.diet === 'vegan' ? '1 glass soy milk + 1 banana' : '1 handful roasted chana + 1 banana'
+    return withFruit(profile.diet === 'vegan' ? '1 glass soy milk' : '1 handful roasted chana')
   }
-  return '1 glass milk or sweet lassi + 1 banana'
+  return withFruit('1 glass milk or sweet lassi')
 }
 
 // ── Body ─────────────────────────────────────────────────────
